@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="el">
+    <!-- Placeholder for Header -->
+    <head>
+        <div id="header"></div>
+        <link href="stylesheets/login.css" rel="stylesheet" />
+    </head>
+
+    <body>
+        <div id="navbar"></div>
+
+        <div class="m-5 d-flex justify-content-center align-items-center">
+            <div class="">
+                <a href="">
+                    <img
+                        src="media/logo_gr.png"
+                        alt="Logo Image 1"
+                        class="white-bar-content"
+                        style="max-width: 100%; height: auto"
+                    />
+                </a>
+            </div>
+        </div>
+        <div
+            class="login-window shadow-lg container-sm text-center p-5 rounded position-fixed top-50 start-50 translate-middle"
+        >
+            <h2 class="mb-3">Login</h2>
+            <form action="/login" method="POST">
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input
+                        type="email"
+                        class="form-control"
+                        id="email"
+                        name="email"
+                        required
+                    />
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input
+                        type="password"
+                        class="form-control"
+                        id="password"
+                        name="password"
+                        required
+                    />
+                </div>
+                <button type="button" id="loginBtn" class="btn btn-primary">
+                    Login
+                </button>
+            </form>
+        </div>
+        <script src="js/loadPartials.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    </body>
+</html>

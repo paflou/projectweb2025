@@ -1,8 +1,89 @@
-body {
-  padding: 50px;
-  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+.extra-small-text {
+    font-size: 12px;
 }
 
-a {
-  color: #00B7FF;
+footer {
+    background-color: #00264d;
+    width: 100%; /* Make the footer stretch to full width */
+    position: relative;
+    bottom: 0;
+    left: 0; /* Stretch to the left edge */
+    text-align: center; /* Center the text */
+}
+
+/* Make the second bar sticky at the top */
+.white-bar {
+    background-color: #ffffff;
+    position: sticky;
+    z-index: 10;
+    top: 0;
+    /* Make sure it's above other content */
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    /* Light shadow */
+    transform-origin: top;
+    transition: transform 0.25s ease;
+}
+.white-bar-contents {
+    transition: transform 0.25s ease;
+}
+.shrink {
+    transform: scaleY(0.85);
+}
+
+.shrink-contents {
+    transform: scaleX(0.85);
+}
+
+.video-container {
+    position: relative;
+    height: 100vh; /* Full viewport height */
+}
+.video-container video {
+    background-color: #00264d;
+    position: absolute;
+    width: 100%;
+    transform: translateY(-55%);
+    height: 100%;
+    max-height: 69vh;
+
+    object-fit: cover;
+    z-index: -1; /* Push video behind content */
+}
+.floating-bar {
+    width: 100%;
+    max-width: 1200px;
+    position: relative;
+    transform: translateY(20vh);
+}
+
+.shadow-left-right {
+    box-shadow:
+        7px 0 0 rgba(0, 0, 0, 0.05),
+        -7px 0 0 rgba(0, 0, 0, 0.05);
+}
+
+label {
+    display: block;
+    font:
+        1rem "Fira Sans",
+        sans-serif;
+}
+
+input,
+label {
+    margin: 0.4rem 0;
+}
+
+table,
+tr,
+th,
+td {
+    border: 1px solid #dddddd;
+    border-collapse: collapse;
+}
+
+.tbl-header {
+    width: calc(100% - 17px);
+    width: -webkit-calc(100% - 17px);
+    width: -moz-calc(100% - 17px);
 }
