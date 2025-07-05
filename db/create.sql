@@ -13,8 +13,8 @@ password VARCHAR(255) NOT NULL,
 name VARCHAR(50),
 surname VARCHAR(50),
 email VARCHAR(30),
-landline INT,
-mobile INT,
+landline BIGINT,
+mobile BIGINT,
 role ENUM('student','professor','secretary') NOT NULL,
 
 PRIMARY KEY (id)

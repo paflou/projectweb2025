@@ -1,9 +1,37 @@
+/* Primary color */
+:root {
+  --custom-primary: #00274e;
+  --custom-primary-hover: #014b96; /* darker shade for hover */
+}
+
+/* Button primary */
+.btn-primary {
+  background-color: var(--custom-primary) !important;
+  border-color: var(--custom-primary) !important;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active,
+.show > .btn-primary.dropdown-toggle {
+  background-color: var(--custom-primary-hover) !important;
+  border-color: var(--custom-primary-hover) !important;
+}
+
+/* Background primary utility */
+body .bg-primary {
+  background-color: var(--custom-primary) !important;
+  border-color: var(--custom-primary) !important;
+}
+
+
 .extra-small-text {
     font-size: 12px;
 }
 
 footer {
-    background-color: #00264d;
     width: 100%; /* Make the footer stretch to full width */
     position: relative;
     bottom: 0;
@@ -34,12 +62,7 @@ footer {
     transform: scaleX(0.85);
 }
 
-.video-container {
-    position: relative;
-    height: 100vh; /* Full viewport height */
-}
 .video-container video {
-    background-color: #00264d;
     position: absolute;
     width: 100%;
     transform: translateY(-55%);
