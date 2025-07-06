@@ -3,9 +3,13 @@ var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
 
-var homepageRouter = require("./routers/homepageRouter");
-var usersRouter = require("./routers/userRouter");
-var loginRouter = require("./routers/loginRouter");
+var homepageRouter = require("./routes/homepageRouter");
+var usersRouter = require("./routes/userRouter");
+var loginRouter = require("./routes/loginRouter");
+
+var professorRouter = require("./routes/professor/professorRouter");
+var studentRouter = require("./routes/student/studentRouter");
+var secretaryRouter = require("./routes/secretary/secretaryRouter");
 
 require('dotenv').config();
 
@@ -44,5 +48,9 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/", homepageRouter);
 app.use("/login", loginRouter);
 app.use("/users", usersRouter);
+
+app.use("/prof", professorRouter);
+app.use("/secretary", secretaryRouter);
+app.use("/student", studentRouter);
 
 module.exports = app;

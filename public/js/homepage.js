@@ -3,32 +3,14 @@ async function checkLogin() {
     const res = await fetch('/api/current-user');
     const data = await res.json();
     if (data.loggedIn) {
-      const loginBtn = document.getElementById('loginBtn');
-      if (loginBtn) loginBtn.style.display = 'none';
-
-      const logoutBtn = document.getElementById('logoutBtn');
-      if (logoutBtn) {
-        logoutBtn.style.display = 'block';
-
-        // Attach logout event here after showing button
-        logoutBtn.addEventListener('click', async () => {
-          try {
-            const logoutRes = await fetch('/logout', { method: 'POST' });
-            if (logoutRes.ok) {
-              window.location.href = '/'; // redirect after logout
-            } else {
-              console.error('Logout failed');
-            }
-          } catch (err) {
-            console.error('Error logging out:', err);
-          }
-        });
+      if (data.role === 'professor') {
+        window.location.href = '/prof'; // redirect on success
       }
-
-      const welcomeMsg = document.getElementById('welcomeMsg');
-      if (welcomeMsg) {
-        welcomeMsg.textContent = `Καλώς ήρθες, ${data.username}`;
-        welcomeMsg.style.display = 'block';
+      else if (data.role === 'student') {
+        window.location.href = '/student'; // redirect on success
+      }
+      else if (data.role === 'secretary') {
+        window.location.href = '/secretary'; // redirect on success
       }
     }
   } catch (error) {

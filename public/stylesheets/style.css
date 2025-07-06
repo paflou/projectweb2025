@@ -26,6 +26,9 @@ body .bg-primary {
   border-color: var(--custom-primary) !important;
 }
 
+body {
+  visibility: hidden; /* hide the entire page (to avoid flashing after partial loading)*/
+}
 
 .extra-small-text {
     font-size: 12px;

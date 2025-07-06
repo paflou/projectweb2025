@@ -12,57 +12,7 @@
 </head>
 
 <body id="body" class="d-flex flex-column min-vh-100">
-    <!-- First Bar (Blue) -->
-    <nav class="bg-primary navbar navbar-expand" style="height: 40px; z-index: 1000" id="bar1">
-        <div class="container-sm">
-            <!-- Left Language Icons -->
-            <div class="d-flex align-items-center">
-                <a href="#" class="me-3">
-                    <img src="media/gr.png" alt="Greek Flag" width="20" height="12" />
-                </a>
-                <a href="#" class="me-3">
-                    <img src="media/gb.png" alt="English Flag" width="20" height="12" />
-                </a>
-            </div>
-            <ul class="navbar-nav">
-                <li class="nav-item">
-                    <a class="nav-link active text-white extra-small-text" aria-current="page"
-                        href="https://www.upatras.gr/" target="_blank">Πανεπιστήμιο Πατρών</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-white extra-small-text" href="https://www.ceid.upatras.gr/"
-                        target="_blank">ΤΜΗΥΠ</a>
-                </li>
-            </ul>
-        </div>
-    </nav>
-
-    <!-- Second Bar (White) -->
-    <div class="white-bar p-3" id="whiteBar">
-        <div class="container white-bar-contents">
-            <div class="row align-items-center">
-                <!-- Left Side: Logo -->
-                <div class="col-sm-10 d-flex align-items-center">
-                    <a href="/">
-                        <img src="media/logo_gr.png" alt="Logo" class="white-bar-content"
-                            style="max-width: 100%; height: auto;">
-                    </a>
-                </div>
-
-                <!-- Right Side: Auth Buttons -->
-                <div class="col-sm-2 text-center align-items-center">
-                    <p id="welcomeMsg" class="mb-2 fw-bold white-bar-content" style="color: #00264D;">Σύνδεση</p>
-
-                    <a id="loginBtn" class="btn btn-primary btn-md white-bar-content"
-                        style="border: none; padding: 15px 40px;" href="/login" role="button">Login</a>
-
-                    <a id="logoutBtn" class="btn btn-primary btn-md white-bar-content"
-                        style="display: none; padding: 15px 40px;" href="#" role="button">Logout</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <div id="navbar"></div>
 
     <main class="flex-grow-1">
         <div class="video-container">
@@ -107,12 +57,12 @@
                                     <div class="row">
                                         <div class="col">
                                             <label for="start">Από:</label>
-                                            <input type="date" id="start" name="trip-start" value="2018-07-22"
+                                            <input type="date" id="start" value="2018-07-22"
                                                 min="2018-01-01" max="2018-12-31" />
                                         </div>
                                         <div class="col">
-                                            <label for="start">Έως:</label>
-                                            <input type="date" id="start" name="trip-start" value="2018-07-22"
+                                            <label for="end">Έως:</label>
+                                            <input type="date" id="end" value="2018-07-22"
                                                 min="2018-01-01" max="2018-12-31" />
                                         </div>
                                     </div>
@@ -170,11 +120,10 @@
             </div>
     </main>
 
-    <footer class="bg-primary footer mt-auto p-1 text-white text-center">
-        <p>&copy; 2024 CEID - University of Patras. All rights reserved.</p>
-    </footer>
+    <div id="footer"></div>
 
 
+    <script src="/js/loadPartials.js"></script>
     <script src="/js/makeBarSmaller.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous">
