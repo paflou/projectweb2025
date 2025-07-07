@@ -1,6 +1,6 @@
 function checkPermission(role) {
   return function (req, res, next) {
-    if (!req.session.userId) {
+    if (req.session.userId === null || req.session.userId === undefined) {
       return res.redirect('/');
     }
     else if (req.session.role !== role)

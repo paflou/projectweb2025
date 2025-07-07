@@ -1,52 +1,97 @@
-    <!-- First Bar (Blue) -->
-    <nav class="bg-primary navbar navbar-expand" style="height: 40px; z-index: 1000" id="bar1">
-        <div class="container-sm">
-            <!-- Left Language Icons -->
-            <div class="d-flex align-items-center">
-                <a href="#" class="me-3">
-                    <img src="/media/gr.png" alt="Greek Flag" width="20" height="12" />
-                </a>
-                <a href="#" class="me-3">
-                    <img src="/media/gb.png" alt="English Flag" width="20" height="12" />
-                </a>
-            </div>
-            <ul class="navbar-nav">
-                <li class="nav-item">
-                    <a class="nav-link active text-white extra-small-text" aria-current="page"
-                        href="https://www.upatras.gr/" target="_blank">Πανεπιστήμιο Πατρών</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-white extra-small-text" href="https://www.ceid.upatras.gr/"
-                        target="_blank">ΤΜΗΥΠ</a>
-                </li>
-            </ul>
+<!-- First Bar (Blue) -->
+<nav class="bg-primary navbar navbar-expand" style="height: 25px; z-index: 1000" id="bar1">
+    <div class="container-sm">
+        <!-- Left Language Icons -->
+        <div class="d-flex align-items-center">
+            <a href="#" class="me-3">
+                <img src="/media/gr.png" alt="Greek Flag" width="20" height="12" />
+            </a>
+            <a href="#" class="me-3">
+                <img src="/media/gb.png" alt="English Flag" width="20" height="12" />
+            </a>
         </div>
-    </nav>
-
-    <!-- Second Bar (White) -->
-    <div class="white-bar p-3" id="whiteBar">
-        <div class="container white-bar-contents">
-            <div class="row align-items-center">
-                <!-- Left Side: Logo -->
-                <div class="col-sm-10 d-flex align-items-center">
-                    <a href="/">
-                        <img src="/media/logo_gr.png" alt="Logo" class="white-bar-content"
-                            style="max-width: 100%; height: auto;">
-                    </a>
-                </div>
-
-                <!-- Right Side: Auth Buttons -->
-                <div class="col-sm-2 text-center align-items-center">
-                    <p id="welcomeMsg" class="mb-2 fw-bold white-bar-content" style="color: #00264D;">Καλώς ήλθατε</p>
-                    
-                    <form id="loginBtn" action="/login" method="get">
-                        <button type="submit" class="btn btn-primary btn-lg white-bar-content">Login</button>
-                    </form>
-                    <form class="d-none" id="logoutBtn" action="/logout" method="post">
-                        <button type="submit" class="btn btn-primary btn-lg white-bar-content">Logout</button>
-                    </form>
-
-                </div>
-            </div>
-        </div>
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a class="nav-link active text-white extra-small-text" aria-current="page"
+                    href="https://www.upatras.gr/" target="_blank">Πανεπιστήμιο Πατρών</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-white extra-small-text" href="https://www.ceid.upatras.gr/"
+                    target="_blank">ΤΜΗΥΠ</a>
+            </li>
+        </ul>
     </div>
+</nav>
+
+<!-- Navbar inspired from official Bootstrap examples-->
+<nav class="navbar navbar-expand-lg container-fluid justify-content-center white-bar" id="whiteBar">
+    <div class="d-flex justify-content-between m-3 align-items-center w-100">
+        <div>
+            <a href="/">
+                <img src="/media/logo_gr.png" alt="Logo" class="white-bar-content"
+                    style="max-width: 100%; height: auto;">
+            </a>
+        </div>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+
+    <div class="collapse navbar-collapse mx-3" id="navbarSupportedContent">
+        <ul class="text-center navbar-nav me-auto mb-2 mb-lg-0">
+            <!--Professor Navbar Items-->
+            <li class="nav-item professor-items d-none">
+                <a class="nav-link" href="/prof/create">Δημιουργία Θέματος</a>
+            </li>
+            <li class="nav-item professor-items d-none">
+                <a class="nav-link" href="/prof/assign">Ανάθεση Θέματος</a>
+            </li>
+            <li class="nav-item professor-items d-none">
+                <a class="nav-link" href="/prof/view_thesis">Προβολή Θεμάτων</a>
+            </li>
+            <li class="nav-item professor-items d-none">
+                <a class="nav-link" href="/prof/invitations">Προβολή Προσκλήσεων</a>
+            </li>
+            <li class="nav-item professor-items d-none">
+                <a class="nav-link" href="/prof/stats">Προβολή Στατιστικών</a>
+            </li>
+            <li class="nav-item professor-items d-none">
+                <a class="nav-link" href="/prof/manage">Διαχείριση Θεμάτων</a>
+            </li>
+            <!--Secretary Navbar Items-->
+            <li class="nav-item secretary-items d-none">
+                <a class="nav-link" href="/secretary/view_thesis">Προβολή Θεμάτων</a>
+            </li>
+            <li class="nav-item secretary-items d-none">
+                <a class="nav-link" href="/secretary/input">Εισαγωγή Δεδομένων</a>
+            </li>
+            <li class="nav-item secretary-items d-none">
+                <a class="nav-link" href="/secretary/manage">Διαχείριση Θεμάτων</a>
+            </li>
+            <!--Student Navbar Items-->
+            <li class="nav-item student-items d-none">
+                <a class="nav-link" href="/student/view_thesis">Προβολή Θέματος</a>
+            </li>
+            <li class="nav-item student-items d-none">
+                <a class="nav-link" href="/student/profile">Επεξεργασία Προφίλ</a>
+            </li>
+            <li class="nav-item student-items d-none">
+                <a class="nav-link" href="/student/manage">Διαχείριση Εργασίας</a>
+            </li>
+
+            <li class="nav-item mx-5 d-flex justify-content-center align-items-center" id="loginBtn">
+                <form action="/login" method="get">
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
+            </li>
+            <li class="nav-item mx-5 d-none d-flex justify-content-center align-items-center" id="logoutBtn">
+                <form action="/logout" method="post" class="m-0">
+                    <button type="submit" class="btn btn-primary">Logout</button>
+                </form>
+            </li>
+
+        </ul>
+    </div>
+</nav>

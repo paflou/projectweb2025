@@ -1,33 +1,42 @@
 /* Primary color */
 :root {
-  --custom-primary: #00274e;
-  --custom-primary-hover: #014b96; /* darker shade for hover */
+    --custom-primary: #00274e;
+    --custom-primary-subtle: #a0d0ff;
+    --custom-primary-hover: #014b96;
+    /* darker shade for hover */
+    --custom-background: #014b9604;
 }
 
 /* Button primary */
 .btn-primary {
-  background-color: var(--custom-primary) !important;
-  border-color: var(--custom-primary) !important;
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+    background-color: var(--custom-primary) !important;
+    border-color: var(--custom-primary) !important;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .btn-primary:hover,
 .btn-primary:focus,
 .btn-primary:active,
 .btn-primary.active,
-.show > .btn-primary.dropdown-toggle {
-  background-color: var(--custom-primary-hover) !important;
-  border-color: var(--custom-primary-hover) !important;
+.show>.btn-primary.dropdown-toggle {
+    background-color: var(--custom-primary-hover) !important;
+    border-color: var(--custom-primary-hover) !important;
 }
 
 /* Background primary utility */
 body .bg-primary {
-  background-color: var(--custom-primary) !important;
-  border-color: var(--custom-primary) !important;
+    background-color: var(--custom-primary) !important;
+    border-color: var(--custom-primary) !important;
+}
+
+body .bg-primary-subtle {
+    background-color: var(--custom-background) !important;
 }
 
 body {
-  visibility: hidden; /* hide the entire page (to avoid flashing after partial loading)*/
+    visibility: hidden;
+    background-color: var(--custom-background) !important;
+    /* hide the entire page (to avoid flashing after partial loading)*/
 }
 
 .extra-small-text {
@@ -35,11 +44,14 @@ body {
 }
 
 footer {
-    width: 100%; /* Make the footer stretch to full width */
+    width: 100%;
+    /* Make the footer stretch to full width */
     position: relative;
     bottom: 0;
-    left: 0; /* Stretch to the left edge */
-    text-align: center; /* Center the text */
+    left: 0;
+    /* Stretch to the left edge */
+    text-align: center;
+    /* Center the text */
 }
 
 /* Make the second bar sticky at the top */
@@ -54,16 +66,6 @@ footer {
     transform-origin: top;
     transition: transform 0.25s ease;
 }
-.white-bar-contents {
-    transition: transform 0.25s ease;
-}
-.shrink {
-    transform: scaleY(0.85);
-}
-
-.shrink-contents {
-    transform: scaleX(0.85);
-}
 
 .video-container video {
     position: absolute;
@@ -73,8 +75,10 @@ footer {
     max-height: 69vh;
 
     object-fit: cover;
-    z-index: -1; /* Push video behind content */
+    z-index: -1;
+    /* Push video behind content */
 }
+
 .floating-bar {
     width: 100%;
     max-width: 1200px;
@@ -112,4 +116,17 @@ td {
     width: calc(100% - 17px);
     width: -webkit-calc(100% - 17px);
     width: -moz-calc(100% - 17px);
+}
+
+.card {
+    border-radius: 4px;
+    box-shadow: 0 6px 10px rgba(0, 0, 0, .08), 0 0 6px rgba(0, 0, 0, .05);
+    transition: .5s transform cubic-bezier(.155, 1.105, .295, 1.12), .3s box-shadow, .3s -webkit-transform cubic-bezier(.155, 1.105, .295, 1.12);
+    padding: 14px 80px 18px 36px;
+    cursor: pointer;
+}
+
+.card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, .12), 0 4px 8px rgba(0, 0, 0, .06);
 }

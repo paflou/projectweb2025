@@ -23,8 +23,8 @@ PRIMARY KEY (id)
 CREATE TABLE IF NOT EXISTS professor (
 id INT,
 topic VARCHAR(255),
-department VARCHAR(50),
-university VARCHAR(50),
+department VARCHAR(250),
+university VARCHAR(250),
 
 PRIMARY KEY (id),
 CONSTRAINT prof_id

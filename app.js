@@ -4,8 +4,7 @@ var cookieParser = require("cookie-parser");
 var logger = require("morgan");
 
 var homepageRouter = require("./routes/homepageRouter");
-var usersRouter = require("./routes/userRouter");
-var loginRouter = require("./routes/loginRouter");
+var { router: loginRouter } = require('./routes/loginRouter');
 
 var professorRouter = require("./routes/professor/professorRouter");
 var studentRouter = require("./routes/student/studentRouter");
@@ -47,7 +46,6 @@ app.use(express.static(path.join(__dirname, "public")));
 
 app.use("/", homepageRouter);
 app.use("/login", loginRouter);
-app.use("/users", usersRouter);
 
 app.use("/prof", professorRouter);
 app.use("/secretary", secretaryRouter);

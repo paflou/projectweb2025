@@ -3,6 +3,13 @@ var router = express.Router();
 var path = require("path"); // Add this line to import the path module
 
 router.get("/", (req, res) => {
+  const role = req.session.role; // or however you store session/user info
+
+  if (role) {
+    if (role === 'professor') return res.redirect('/prof');
+    if (role === 'student') return res.redirect('/student');
+    if (role === 'secretary') return res.redirect('/secretary');
+  }
   res.sendFile(path.join(__dirname, "../public/homepage.html"));
 });
 

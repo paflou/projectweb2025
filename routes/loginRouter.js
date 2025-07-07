@@ -1,14 +1,13 @@
 var express = require("express");
 var router = express.Router();
-
-const pool = require("../db/db"); // adjust the path as needed
+const pool = require("../db/db");
 
 var path = require("path");
 const redirectIfLoggedIn = require("../middlewares/redirectIfLoggedIn");
 
 /* GET login page. */
 router.get("/", redirectIfLoggedIn, (req, res) => {
-    res.sendFile(path.join(__dirname, "../public/login.html"));
+  res.sendFile(path.join(__dirname, "../public/login.html"));
 });
 
 // POST /login handler
@@ -19,6 +18,7 @@ router.post('/', async (req, res) => {
     const user = await authenticateUser(email, password);
     if (user) {
       req.session.userId = user.id;
+      req.session.email = user.email;
       req.session.username = user.username;
       req.session.role = user.role;
       res.redirect('/');
@@ -29,8 +29,6 @@ router.post('/', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
-
-module.exports = router;
 
 
 function authenticateUser(email, password) {
@@ -54,3 +52,8 @@ function authenticateUser(email, password) {
       .catch(err => reject(err));
   })
 }
+
+module.exports = {
+  router,
+  authenticateUser
+};

@@ -1,6 +1,6 @@
 function redirectIfLoggedIn(req, res, next) {
   if (req.session.userId) {
-    return res.redirect('/');
+    res.redirect("/prof/");
   }
   next();
 }
