@@ -8,7 +8,7 @@ DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=secret123
 DB_NAME=mydatabase
-DB_PORT=3306
+DB_CONNECTION_LIMIT= X
 ```
 
 ## 2. Seed the database
