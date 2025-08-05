@@ -8,10 +8,16 @@ DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=secret123
 DB_NAME=mydatabase
-DB_PORT=3306
+DB_CONNECTION_LIMIT= X
 ```
 
-## 2. Seed the database
+## 2. Install dependencies and seed the database
+
+Run the following command to install node modules:
+
+```bash
+npm install
+```
 
 Run the following command to seed the database with initial data:
 
