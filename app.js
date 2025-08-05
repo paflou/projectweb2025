@@ -3,6 +3,7 @@ var express = require("express");
 var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
+const fs = require('fs');
 
 // Import route handlers
 var homepageRouter = require("./routes/homepageRouter");
@@ -19,6 +20,12 @@ var MySQLStore = require("express-mysql-session")(require("express-session"));
 var session = require("express-session");
 
 var app = express();
+
+// Ensure upload dir exists
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
 
 // Configure MySQL session store
 const sessionStore = new MySQLStore({
@@ -62,6 +69,16 @@ app.use("/login", loginRouter);
 app.use("/prof", professorRouter);
 app.use("/secretary", secretaryRouter);
 app.use("/student", studentRouter);
+
+
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, 'uploads'), {
+    dotfiles: 'deny',
+    index: false,
+  })
+);
+
 
 // Export the app module
 module.exports = app;

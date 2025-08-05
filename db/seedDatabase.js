@@ -10,7 +10,7 @@ const insertFilePath = path.join(__dirname, 'insert.sql'); // __dirname = script
 async function seedDatabase() {
   const conn = await pool.getConnection();
   try {
-    // Create db query
+    // Create create query
     let sql = await fs.readFile(createFilePath, 'utf-8', (err, data) => {
         if (err) {
             console.error(err);
@@ -18,10 +18,10 @@ async function seedDatabase() {
         }
         console.log(data);
     })
-    //Execute the query
+    // Execute the query
     let rows = await conn.query(sql);
     
-    // Insert db query
+    // Create insert query
     sql = await fs.readFile(insertFilePath, 'utf-8', (err, data) => {
     if (err) {
         console.error(err);
@@ -30,7 +30,7 @@ async function seedDatabase() {
     console.log(data);
     })
 
-    //Execute the query
+    // Execute the query
     rows = await conn.query(sql);
     conn.release();
 

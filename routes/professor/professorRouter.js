@@ -2,6 +2,95 @@ var express = require("express");
 var router = express.Router();
 var path = require("path");
 const checkPermission = require("../../middlewares/checkPermission");
+var formidable = require('formidable');
+const fs = require('fs');
+const pool = require("../../db/db");
+
+// Handles thesis submission, including file upload and database insertion
+function submitThesis(req, res) {
+  // Create a new formidable form for parsing file uploads
+  const form = new formidable.IncomingForm();
+  const fsPromises = fs.promises;
+
+  // Define the directory to store uploaded files
+  const uploadDir = path.join(process.cwd(), 'uploads');
+  form.keepExtensions = true;
+
+  // Parse the incoming request containing fields and files
+  form.parse(req, async (err, fields, files) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send('Error parsing the file');
+    }
+
+    // Get the uploaded PDF file (handle both array and single file cases)
+    const file = Array.isArray(files.pdf) ? files.pdf[0] : files.pdf;
+    if (!file) {
+      return res.status(400).send('No file uploaded');
+    }
+
+    // Prepare paths for moving the uploaded file
+    const oldPath = file.filepath;
+    const safeName = path.basename(file.originalFilename);
+    const newPath = path.join(uploadDir, safeName);
+
+    // Log thesis details for debugging
+    console.log(fields.title);
+    console.log(fields.summary);
+    console.log(safeName);
+
+    try {
+      // Move the uploaded file to the uploads directory
+      await fsPromises.copyFile(oldPath, newPath);
+      await fsPromises.unlink(oldPath);
+      res.redirect('/prof/create');
+    } catch (error) {
+      console.error(error);
+      res.status(500).send('Error saving the file');
+    }
+
+    // SQL query to insert thesis details into the database
+    const sql = `
+    INSERT INTO thesis 
+    (supervisor_id, member1_id, member2_id,
+    student_id, title, description,
+    pdf, grade)
+    
+    VALUES 
+    (?, NULL, NULL, 
+    NULL, ?, ?,
+    ?, NULL) 
+    `
+
+    // Prepare query parameters
+    params = [req.session.userId, fields.title, fields.summary, safeName]
+    
+    // Get a connection from the pool
+    const conn = await pool.getConnection();
+    try {
+      // Execute the query
+      const rows = await conn.query(sql, params);
+      conn.release();
+
+      // Return the first row if found, otherwise null
+      if (rows.length > 0) {
+        return rows[0];
+      } else {
+        return null;
+      }
+    } catch (err) {
+      // Release the connection and propagate the error
+      conn.release();
+      throw err;
+    }
+  });
+}
+
+// Route: POST /professor/create-topic/
+// Saves a new thesis created by a professor
+router.post('/create-topic', (req, res) => {
+  submitThesis(req, res);
+});
 
 // Route: GET /professor/
 // Serve the main professor dashboard page
