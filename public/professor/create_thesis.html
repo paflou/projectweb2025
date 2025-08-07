@@ -23,13 +23,7 @@
             </button>
 
             <h4>Υπάρχοντα Θέματα</h4>
-            <ul class="list-group mb-4">
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Placeholder Title
-                    <button class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#thesisModal">
-                        Επεξεργασία
-                    </button>
-                </li>
+            <ul id="table" class="list-group mb-4">
             </ul>
         </div>
 
@@ -53,8 +47,7 @@
                             </div>
                             <div class="mb-3">
                                 <label for="pdf" class="form-label">Αρχείο PDF</label>
-                                <input type="file" class="form-control" id="pdf" name="pdf" accept="application/pdf"
-                                    required>
+                                <input type="file" class="form-control" id="pdf" name="pdf" accept="application/pdf">
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -73,6 +66,7 @@
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous">
         </script>
     <script src="/js/loadPartials.js"></script>
+    <script src="/js/populateThesisList.js"></script>
 </body>
 
 </html>

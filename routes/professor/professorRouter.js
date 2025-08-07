@@ -18,36 +18,39 @@ function submitThesis(req, res) {
 
   // Parse the incoming request containing fields and files
   form.parse(req, async (err, fields, files) => {
+    /*
     if (err) {
       console.error(err);
       return res.status(500).send('Error parsing the file');
     }
-
+    */
     // Get the uploaded PDF file (handle both array and single file cases)
     const file = Array.isArray(files.pdf) ? files.pdf[0] : files.pdf;
-    if (!file) {
-      return res.status(400).send('No file uploaded');
+    if (file) {
+      // Prepare paths for moving the uploaded file
+      const oldPath = file.filepath;
+      const safeName = path.basename(file.originalFilename);
+      const newPath = path.join(uploadDir, safeName);
+
+      // Log thesis details for debugging
+      console.log(fields.title);
+      console.log(fields.summary);
+      console.log(safeName);
+
+      try {
+        // Move the uploaded file to the uploads directory
+        await fsPromises.copyFile(oldPath, newPath);
+        await fsPromises.unlink(oldPath);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send('Error saving the file');
+      }
     }
-
-    // Prepare paths for moving the uploaded file
-    const oldPath = file.filepath;
-    const safeName = path.basename(file.originalFilename);
-    const newPath = path.join(uploadDir, safeName);
-
-    // Log thesis details for debugging
-    console.log(fields.title);
-    console.log(fields.summary);
-    console.log(safeName);
-
-    try {
-      // Move the uploaded file to the uploads directory
-      await fsPromises.copyFile(oldPath, newPath);
-      await fsPromises.unlink(oldPath);
-      res.redirect('/prof/create');
-    } catch (error) {
-      console.error(error);
-      res.status(500).send('Error saving the file');
+    else {
+      safeName = 'NULL'
     }
+    res.redirect('/prof/create');
+
 
     // SQL query to insert thesis details into the database
     const sql = `
@@ -64,7 +67,7 @@ function submitThesis(req, res) {
 
     // Prepare query parameters
     params = [req.session.userId, fields.title, fields.summary, safeName]
-    
+
     // Get a connection from the pool
     const conn = await pool.getConnection();
     try {
@@ -79,12 +82,75 @@ function submitThesis(req, res) {
         return null;
       }
     } catch (err) {
-      // Release the connection and propagate the error
-      conn.release();
-      throw err;
+      if (err.code === 'ER_DUP_ENTRY') {
+        console.error('Duplicate entry error:', err.message);
+        // Handle gracefully (e.g., send user-friendly response)
+      }
+      else {
+        // Release the connection and propagate the error
+        conn.release();
+        throw err;
+      }
     }
   });
 }
+
+// Function to fetch under assignment thesis' of current professor
+async function getUnderAssignment(req) {
+  // SQL query to select user and student fields by user ID
+  const sql = `
+    SELECT title, description, pdf
+    FROM thesis
+    WHERE supervisor_id = ? AND thesis_status = 'under-assignment'
+  `;
+
+  // Use the userId from the session as the query parameter
+  const params = [req.session.userId];
+  // Get a connection from the pool
+  const conn = await pool.getConnection();
+  try {
+    // Execute the query
+    const rows = await conn.query(sql, params);
+    conn.release();
+
+    // Return the first row if found, otherwise null
+    if (rows.length > 0) {
+      console.log(rows)
+      return rows;
+    } else {
+      return null;
+    }
+  } catch (err) {
+    // Release the connection and propagate the error
+    conn.release();
+    throw err;
+  }
+}
+
+
+// Route: GET /professor/get-info
+// Fetch and return the professors thesis' under assignment as JSON
+router.get('/get-under-assignment', async (req, res) => {
+  try {
+    // Retrieve student information from the database
+    const info = await getUnderAssignment(req);
+    if (info) {
+      // Set response header to JSON and send the info
+      // Convert BigInt values to strings if present
+      res.setHeader('Content-Type', 'application/json');
+      res.send(JSON.stringify({ info }, (_, v) =>
+        typeof v === 'bigint' ? v.toString() : v
+      ));
+    } else {
+      // If no info found, send 401 error
+      res.status(401).json({ error: 'Could not fetch Data' });
+    }
+  } catch (err) {
+    // Log and send server error if something goes wrong
+    console.error('Error in /get-info:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
 
 // Route: POST /professor/create-topic/
 // Saves a new thesis created by a professor

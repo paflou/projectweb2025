@@ -54,7 +54,7 @@ CREATE TABLE
         member1_id INT,
         member2_id INT,
         student_id INT,
-        title VARCHAR(255) NOT NULL,
+        title VARCHAR(255) UNIQUE NOT NULL,
         description TEXT,
         submission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         pdf TEXT,
