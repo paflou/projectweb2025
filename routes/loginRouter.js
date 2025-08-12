@@ -3,12 +3,10 @@ var router = express.Router();
 const pool = require("../db/db");
 
 var path = require("path");
-const redirectIfLoggedIn = require("../middlewares/redirectIfLoggedIn");
 
 // GET /login page handler
-// If user is already logged in, redirect them (middleware)
-// Otherwise, serve the login HTML page
-router.get("/", redirectIfLoggedIn, (req, res) => {
+// Serve the login HTML page
+router.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../public/login.html"));
 });
 

@@ -6,8 +6,115 @@ var formidable = require('formidable');
 const fs = require('fs');
 const pool = require("../../db/db");
 
+async function insertThesisToDB(req, res, fields, safeName) {
+  // SQL query to insert thesis details into the database
+  const sql = `
+    INSERT INTO thesis 
+    (supervisor_id, member1_id, member2_id,
+    student_id, title, description,
+    pdf, grade)
+    
+    VALUES 
+    (?, NULL, NULL, 
+    NULL, ?, ?,
+    ?, NULL) 
+    `;
+
+  // Prepare query parameters
+  params = [req.session.userId, fields.title, fields.summary, safeName]
+
+  // Get a connection from the pool
+  const conn = await pool.getConnection();
+  try {
+    // Execute the query
+    const rows = await conn.query(sql, params);
+    conn.release();
+    res.status(200).send("Thesis submitted successfully")
+
+    // Return the first row if found, otherwise null
+    if (rows.length > 0) {
+      return rows[0];
+    } else {
+      return null;
+    }
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      console.error('Duplicate entry error:', err.message);
+      // Handle gracefully (e.g., send user-friendly response)
+      return res.status(409).send("Thesis already exists")
+
+    }
+    else {
+      // Release the connection and propagate the error
+      conn.release();
+      throw err;
+    }
+  }
+}
+
+async function updateThesis(req, res, fields, safeName) {
+  let sql = null;
+  console.log(safeName)
+  // SQL query to insert thesis details into the database
+  if (safeName !== 'NULL') {
+    sql = `
+    UPDATE thesis SET
+    title = ?,
+    description = ?,
+    pdf = ?
+    WHERE id = ?
+    `;
+    params = [fields.title, fields.summary, safeName, fields.id]
+
+  }
+  else {
+    sql = `
+    UPDATE thesis SET
+    title = ?,
+    description = ?
+    WHERE id = ?
+    `;
+    params = [fields.title, fields.summary, fields.id]
+
+  }
+
+  // Prepare query parameters
+
+  // Log the SQL query and parameters for debugging
+  console.log("Update Thesis SQL Query:", sql);
+  console.log("Update Thesis Params:", params);
+
+
+  // Get a connection from the pool
+  const conn = await pool.getConnection();
+  try {
+    // Execute the query
+    const rows = await conn.query(sql, params);
+    conn.release();
+    res.status(200).send("Thesis updated successfully")
+
+    // Return the first row if found, otherwise null
+    if (rows.length > 0) {
+      return rows[0];
+    } else {
+      return null;
+    }
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      console.error('Duplicate entry error:', err.message);
+      // Handle gracefully (e.g., send user-friendly response)
+      return res.status(409).send("Thesis already exists")
+    }
+    else {
+      // Release the connection and propagate the error
+      conn.release();
+      throw err;
+    }
+  }
+}
+
 // Handles thesis submission, including file upload and database insertion
-function submitThesis(req, res) {
+function submitThesis(req, res, action) {
   // Create a new formidable form for parsing file uploads
   const form = new formidable.IncomingForm();
   const fsPromises = fs.promises;
@@ -18,18 +125,13 @@ function submitThesis(req, res) {
 
   // Parse the incoming request containing fields and files
   form.parse(req, async (err, fields, files) => {
-    /*
-    if (err) {
-      console.error(err);
-      return res.status(500).send('Error parsing the file');
-    }
-    */
+    let safeName;
     // Get the uploaded PDF file (handle both array and single file cases)
     const file = Array.isArray(files.pdf) ? files.pdf[0] : files.pdf;
     if (file) {
       // Prepare paths for moving the uploaded file
       const oldPath = file.filepath;
-      const safeName = path.basename(file.originalFilename);
+      safeName = path.basename(file.originalFilename);
       const newPath = path.join(uploadDir, safeName);
 
       // Log thesis details for debugging
@@ -49,49 +151,11 @@ function submitThesis(req, res) {
     else {
       safeName = 'NULL'
     }
-    res.redirect('/prof/create');
+    if (action === 'insert')
+      insertThesisToDB(req, res, fields, safeName);
+    else if (action === 'update')
+      updateThesis(req, res, fields, safeName);
 
-
-    // SQL query to insert thesis details into the database
-    const sql = `
-    INSERT INTO thesis 
-    (supervisor_id, member1_id, member2_id,
-    student_id, title, description,
-    pdf, grade)
-    
-    VALUES 
-    (?, NULL, NULL, 
-    NULL, ?, ?,
-    ?, NULL) 
-    `
-
-    // Prepare query parameters
-    params = [req.session.userId, fields.title, fields.summary, safeName]
-
-    // Get a connection from the pool
-    const conn = await pool.getConnection();
-    try {
-      // Execute the query
-      const rows = await conn.query(sql, params);
-      conn.release();
-
-      // Return the first row if found, otherwise null
-      if (rows.length > 0) {
-        return rows[0];
-      } else {
-        return null;
-      }
-    } catch (err) {
-      if (err.code === 'ER_DUP_ENTRY') {
-        console.error('Duplicate entry error:', err.message);
-        // Handle gracefully (e.g., send user-friendly response)
-      }
-      else {
-        // Release the connection and propagate the error
-        conn.release();
-        throw err;
-      }
-    }
   });
 }
 
@@ -99,7 +163,7 @@ function submitThesis(req, res) {
 async function getUnderAssignment(req) {
   // SQL query to select user and student fields by user ID
   const sql = `
-    SELECT title, description, pdf
+    SELECT id, title, description, pdf
     FROM thesis
     WHERE supervisor_id = ? AND thesis_status = 'under-assignment'
   `;
@@ -155,7 +219,11 @@ router.get('/get-under-assignment', async (req, res) => {
 // Route: POST /professor/create-topic/
 // Saves a new thesis created by a professor
 router.post('/create-topic', (req, res) => {
-  submitThesis(req, res);
+  submitThesis(req, res, 'insert');
+});
+
+router.post('/update-topic', (req, res) => {
+  submitThesis(req, res, 'update');
 });
 
 // Route: GET /professor/

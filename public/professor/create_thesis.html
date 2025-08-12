@@ -18,7 +18,8 @@
 
         <div class="container">
 
-            <button class="btn btn-primary my-3" data-bs-toggle="modal" data-bs-target="#thesisModal">
+            <button id="new-thesis-button" class="btn btn-primary my-3" data-bs-toggle="modal"
+                data-bs-target="#thesisModal">
                 Νέο Θέμα
             </button>
 
@@ -27,11 +28,12 @@
             </ul>
         </div>
 
-        <!-- Modal for Creating New Thesis -->
+        <!-- Modal for creating / updating Thesis -->
         <div class="modal fade" id="thesisModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
-                    <form action="/prof/create-topic" id="form" method="POST" enctype="multipart/form-data">
+                    <form action="#" id="form">
+                        <input id="thesisID"  name="id" class="d-none">
                         <div class="modal-header">
                             <h5 class="modal-title" id="createThesisModalLabel">Καταχώρηση Νέου Θέματος</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -48,11 +50,17 @@
                             <div class="mb-3">
                                 <label for="pdf" class="form-label">Αρχείο PDF</label>
                                 <input type="file" class="form-control" id="pdf" name="pdf" accept="application/pdf">
+                                <a id="pdfDownload" href="#" target="_blank" class="d-none">View current PDF</a>
                             </div>
                         </div>
+
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Άκυρο</button>
-                            <button type="submit" class="btn btn-primary">Αποθήκευση</button>
+                            <button id="publishBtn" type="submit" class="btn btn-primary">Δημοσίευση</button>
+                            <button id="updateBtn" type="submit" class="btn btn-primary d-none">Ενημέρωση</button>
+                        </div>
+                        <div class="mb-3 me-3">
+                            <p id="duplicate-message" class="text-end text-danger"></p>
                         </div>
                     </form>
                 </div>
