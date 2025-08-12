@@ -19,6 +19,11 @@ Run the following command to install node modules:
 npm install
 ```
 
+Create a mariaDB database with the name diplomaDB
+```
+CREATE DATABASE diplomaDB;
+```
+
 Run the following command to seed the database with initial data:
 
 ```bash
