@@ -62,19 +62,19 @@ async function updateThesis(req, res, fields, safeName) {
     title = ?,
     description = ?,
     pdf = ?
-    WHERE id = ?
+    WHERE id = ? AND supervisor_id = ?
     `;
-    params = [fields.title, fields.summary, safeName, fields.id]
-
+    params = [fields.title, fields.summary, safeName, fields.id, req.session.userId]
+    
   }
   else {
     sql = `
     UPDATE thesis SET
     title = ?,
     description = ?
-    WHERE id = ?
+    WHERE id = ? AND supervisor_id = ?
     `;
-    params = [fields.title, fields.summary, fields.id]
+    params = [fields.title, fields.summary, fields.id, req.session.userId]
 
   }
 
@@ -191,6 +191,39 @@ async function getUnderAssignment(req) {
   }
 }
 
+router.delete('/delete-topic', async (req, res) => {
+  const sql = `
+    DELETE FROM thesis
+    WHERE id = ? AND supervisor_id = ?
+  `;
+
+  // Use the thesis ID from the request body as the query parameter
+  const params = [req.body.id, req.session.userId];
+
+  console.log("QUERY: " + sql)
+  console.log("ID: " + params)
+
+  // Get a connection from the pool
+  const conn = await pool.getConnection();
+  try {
+    // Execute the delete query
+    const rows = await conn.query(sql, params);
+    conn.release();
+
+    // If rows affected is greater than 0, deletion was successful
+    if (rows.affectedRows > 0) {
+      res.status(200).send("Thesis deleted successfully");
+    } else {
+      res.status(404).send("Thesis not found");
+    }
+  } catch (err) {
+    // Release the connection and log error if something goes wrong
+    conn.release();
+    console.error('Error in DELETE /delete-topic:', err);
+    res.status(500).send('Server error');
+  }
+}
+);
 
 // Route: GET /professor/get-info
 // Fetch and return the professors thesis' under assignment as JSON

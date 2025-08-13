@@ -80,19 +80,29 @@ async function populateThesisTable() {
     const row = "row";
 
     for (let i = 0; i < info.length; i++) {
+        // Create a new list item for each thesis
         const newRow = document.createElement('li');
         newRow.id = row.concat(i);
         newRow.textContent = info[i].title;
         newRow.classList.add("list-group-item", "d-flex", "justify-content-between", "align-items-center");
         document.getElementById('table').appendChild(newRow);
 
-        const newButton = document.createElement('button');
-        newButton.textContent = "Επεξεργασία";
-        newButton.classList.add("btn", "btn-sm", "btn-secondary");
-        newButton.setAttribute('data-bs-toggle', 'modal');
-        newButton.setAttribute('data-bs-target', '#thesisModal');
+        // Create a container div for buttons with horizontal layout
+        const buttonGroup = document.createElement('div');
+        buttonGroup.classList.add('btn-group'); // Bootstrap btn-group arranges buttons horizontally with spacing
+        buttonGroup.id = "buttonGroup".concat(i);
+        newRow.appendChild(buttonGroup);
 
-        newButton.addEventListener('click', () => {
+        // Create an edit button for each thesis
+        const newEditButton = document.createElement('button');
+        newEditButton.textContent = "Επεξεργασία";
+        newEditButton.classList.add("btn", "btn-sm", "btn-secondary", "me-2");
+        newEditButton.setAttribute('data-bs-toggle', 'modal');
+        newEditButton.setAttribute('data-bs-target', '#thesisModal');
+
+        
+        // Add an event listener to handle the click event
+        newEditButton.addEventListener('click', () => {
             // Populate the form with the thesis data
             form.title.value = info[i].title;
             form.summary.value = info[i].description;
@@ -116,6 +126,33 @@ async function populateThesisTable() {
             duplicateMessage.innerText = '';
         });
 
-        document.getElementById(newRow.id).appendChild(newButton);
+        document.getElementById(buttonGroup.id).appendChild(newEditButton);
+
+        // Create a delete button for each thesis
+        const newDeleteButton = document.createElement('button');
+        newDeleteButton.textContent = "Διαγραφή";
+        newDeleteButton.classList.add("btn", "btn-sm", "btn-danger");
+
+        document.getElementById(buttonGroup.id).appendChild(newDeleteButton);
+
+        // Add an event listener to handle the click event
+        newDeleteButton.addEventListener('click', async () => {
+            // Send a DELETE request to the server to delete the thesis
+            const response = await fetch('/prof/delete-topic', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id: info[i].id }) // Send the thesis ID in the request body
+            });
+
+            if (response.ok) {
+                // Remove the row from the table if deletion was successful
+                document.getElementById(newRow.id).remove();
+            } else {
+                console.error('Failed to delete thesis');
+            }
+        }
+        );
     }
 }
