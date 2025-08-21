@@ -268,5 +268,601 @@ router.get("/manage", checkPermission("professor"), (req, res) => {
   res.sendFile(path.join(__dirname, "../../public/professor/manage.html"));
 });
 
+// Route: GET /professor/search-students
+// Search for students by student number or name
+router.get('/search-students', async (req, res) => {
+  try {
+    const { query } = req.query;
+
+    if (!query || query.trim().length < 2) {
+      return res.status(400).json({ error: 'Search query must be at least 2 characters long' });
+    }
+
+    const students = await searchStudents(query.trim());
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify({ students }, (_, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    ));
+  } catch (err) {
+    console.error('Error in /search-students:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Route: GET /professor/available-topics
+// Get available thesis topics for assignment
+router.get('/available-topics', async (req, res) => {
+  try {
+    const topics = await getAvailableTopics(req);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify({ topics }, (_, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    ));
+  } catch (err) {
+    console.error('Error in /available-topics:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Route: GET /professor/temporary-assignments
+// Get temporary assignments awaiting committee approval
+router.get('/temporary-assignments', async (req, res) => {
+  try {
+    const assignments = await getTemporaryAssignments(req);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify({ assignments }, (_, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    ));
+  } catch (err) {
+    console.error('Error in /temporary-assignments:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Route: POST /professor/assign-thesis
+// Assign a thesis to a student
+router.post('/assign-thesis', async (req, res) => {
+  try {
+    const { thesisId, studentId } = req.body;
+
+    if (!thesisId || !studentId) {
+      return res.status(400).json({ error: 'Thesis ID and Student ID are required' });
+    }
+
+    const result = await assignThesisToStudent(req, thesisId, studentId);
+
+    if (result.success) {
+      res.status(200).json({ message: 'Thesis assigned successfully' });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /assign-thesis:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Route: POST /professor/cancel-assignment
+// Cancel a thesis assignment by removing student_id
+router.post('/cancel-assignment', async (req, res) => {
+  try {
+    const { thesisId } = req.body;
+
+    if (!thesisId) {
+      return res.status(400).json({ error: 'Thesis ID is required' });
+    }
+
+    const result = await cancelThesisAssignment(req, thesisId);
+
+    if (result.success) {
+      res.status(200).json({ message: 'Assignment cancelled successfully' });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /cancel-assignment:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Route: GET /professor/get-invitations
+// Get committee invitations for the professor
+router.get('/get-invitations', async (req, res) => {
+  try {
+    const invitations = await getProfessorInvitations(req);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify({ invitations }, (_, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    ));
+  } catch (err) {
+    console.error('Error in /get-invitations:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Route: POST /professor/accept-invitation
+// Accept a committee invitation
+router.post('/accept-invitation', async (req, res) => {
+  try {
+    const { invitationId } = req.body;
+
+    if (!invitationId) {
+      return res.status(400).json({ error: 'Invitation ID is required' });
+    }
+
+    const result = await acceptInvitation(req, invitationId);
+
+    if (result.success) {
+      res.status(200).json({ message: 'Invitation accepted successfully' });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /accept-invitation:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Route: POST /professor/reject-invitation
+// Reject a committee invitation
+router.post('/reject-invitation', async (req, res) => {
+  try {
+    const { invitationId } = req.body;
+
+    if (!invitationId) {
+      return res.status(400).json({ error: 'Invitation ID is required' });
+    }
+
+    const result = await rejectInvitation(req, invitationId);
+
+    if (result.success) {
+      res.status(200).json({ message: 'Invitation rejected successfully' });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /reject-invitation:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Function to search for students by student number or name (only students without thesis)
+async function searchStudents(query) {
+  const sql = `
+    SELECT
+      user.id,
+      user.name,
+      user.surname,
+      user.email,
+      student.student_number
+    FROM user
+    INNER JOIN student ON user.id = student.id
+    LEFT JOIN thesis ON student.id = thesis.student_id
+    WHERE
+      thesis.student_id IS NULL
+      AND (
+        student.student_number LIKE ? OR
+        user.name LIKE ? OR
+        user.surname LIKE ? OR
+        CONCAT(user.name, ' ', user.surname) LIKE ?
+      )
+    ORDER BY student.student_number
+    LIMIT 10
+  `;
+
+  const searchPattern = `%${query}%`;
+  const params = [searchPattern, searchPattern, searchPattern, searchPattern];
+
+  const conn = await pool.getConnection();
+  try {
+    const rows = await conn.query(sql, params);
+    conn.release();
+    return rows || [];
+  } catch (err) {
+    conn.release();
+    throw err;
+  }
+}
+
+// Function to get available thesis topics for assignment
+async function getAvailableTopics(req) {
+  const sql = `
+    SELECT
+      id,
+      title,
+      description,
+      pdf,
+      submission_date
+    FROM thesis
+    WHERE supervisor_id = ? AND thesis_status = 'under-assignment' AND student_id IS NULL
+    ORDER BY submission_date DESC
+  `;
+
+  const params = [req.session.userId];
+
+  const conn = await pool.getConnection();
+  try {
+    const rows = await conn.query(sql, params);
+    conn.release();
+    return rows || [];
+  } catch (err) {
+    conn.release();
+    throw err;
+  }
+}
+
+// Function to get temporary assignments awaiting committee approval
+async function getTemporaryAssignments(req) {
+  const sql = `
+    SELECT
+      t.id,
+      t.title,
+      t.description,
+      t.submission_date,
+      u.name as student_name,
+      u.surname as student_surname,
+      s.student_number,
+      COALESCE(ci.pending_invitations, 0) as pending_invitations,
+      COALESCE(ci.accepted_invitations, 0) as accepted_invitations
+    FROM thesis t
+    INNER JOIN student s ON t.student_id = s.id
+    INNER JOIN user u ON s.id = u.id
+    LEFT JOIN (
+      SELECT
+        thesis_id,
+        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_invitations,
+        SUM(CASE WHEN status = 'accepted' THEN 1 ELSE 0 END) as accepted_invitations
+      FROM committee_invitation
+      GROUP BY thesis_id
+    ) ci ON t.id = ci.thesis_id
+    WHERE t.supervisor_id = ?
+      AND t.thesis_status = 'under-assignment'
+      AND t.student_id IS NOT NULL
+      AND COALESCE(ci.accepted_invitations, 0) < 2
+    ORDER BY t.submission_date DESC
+  `;
+
+  const params = [req.session.userId];
+
+  const conn = await pool.getConnection();
+  try {
+    const rows = await conn.query(sql, params);
+    conn.release();
+    return rows || [];
+  } catch (err) {
+    conn.release();
+    throw err;
+  }
+}
+
+// Function to assign a thesis to a student
+async function assignThesisToStudent(req, thesisId, studentId) {
+  const conn = await pool.getConnection();
+
+  try {
+    // Start transaction
+    await conn.beginTransaction();
+
+    // First, verify that the thesis belongs to the current professor and is available
+    const checkThesisSql = `
+      SELECT id, title, student_id
+      FROM thesis
+      WHERE id = ? AND supervisor_id = ? AND thesis_status = 'under-assignment'
+    `;
+    const thesisRows = await conn.query(checkThesisSql, [thesisId, req.session.userId]);
+
+    if (thesisRows.length === 0) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Thesis not found or not available for assignment' };
+    }
+
+    // Check if thesis is already assigned
+    if (thesisRows[0].student_id !== null) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Thesis is already assigned to another student' };
+    }
+
+    // Verify that the student exists
+    const checkStudentSql = `
+      SELECT id FROM student WHERE id = ?
+    `;
+    const studentRows = await conn.query(checkStudentSql, [studentId]);
+
+    if (studentRows.length === 0) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Student not found' };
+    }
+
+    // Update the thesis with the student ID
+    const updateSql = `
+      UPDATE thesis
+      SET student_id = ?
+      WHERE id = ? AND supervisor_id = ?
+    `;
+    const updateResult = await conn.query(updateSql, [studentId, thesisId, req.session.userId]);
+
+    if (updateResult.affectedRows === 0) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Failed to assign thesis' };
+    }
+
+    // Commit transaction
+    await conn.commit();
+    conn.release();
+
+    return { success: true };
+
+  } catch (err) {
+    await conn.rollback();
+    conn.release();
+    console.error('Error in assignThesisToStudent:', err);
+    throw err;
+  }
+}
+
+// Function to cancel a thesis assignment
+async function cancelThesisAssignment(req, thesisId) {
+  const conn = await pool.getConnection();
+
+  try {
+    // Start transaction
+    await conn.beginTransaction();
+
+    // First, verify that the thesis belongs to the current professor and is assigned
+    const checkThesisSql = `
+      SELECT id, title, student_id
+      FROM thesis
+      WHERE id = ? AND supervisor_id = ? AND thesis_status = 'under-assignment'
+    `;
+    const thesisRows = await conn.query(checkThesisSql, [thesisId, req.session.userId]);
+
+    if (thesisRows.length === 0) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Thesis not found or not available for cancellation' };
+    }
+
+    // Check if thesis is actually assigned to a student
+    if (thesisRows[0].student_id === null) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Thesis is not currently assigned to any student' };
+    }
+
+    // Remove the student assignment by setting student_id to NULL
+    const updateSql = `
+      UPDATE thesis
+      SET student_id = NULL
+      WHERE id = ? AND supervisor_id = ?
+    `;
+    const updateResult = await conn.query(updateSql, [thesisId, req.session.userId]);
+
+    if (updateResult.affectedRows === 0) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Failed to cancel assignment' };
+    }
+
+    // Commit transaction
+    await conn.commit();
+    conn.release();
+
+    return { success: true };
+
+  } catch (err) {
+    await conn.rollback();
+    conn.release();
+    console.error('Error in cancelThesisAssignment:', err);
+    throw err;
+  }
+}
+
+// Function to get professor invitations
+async function getProfessorInvitations(req) {
+  const sql = `
+    SELECT
+      ci.id,
+      ci.status,
+      ci.sent_at as invitation_date,
+      t.title as thesis_title,
+      t.description as thesis_description,
+      u.name as student_name,
+      u.surname as student_surname,
+      s.student_number,
+      supervisor.name as supervisor_name,
+      supervisor.surname as supervisor_surname
+    FROM committee_invitation ci
+    INNER JOIN thesis t ON ci.thesis_id = t.id
+    INNER JOIN student s ON t.student_id = s.id
+    INNER JOIN user u ON s.id = u.id
+    INNER JOIN user supervisor ON t.supervisor_id = supervisor.id
+    WHERE ci.professor_id = ?
+    ORDER BY ci.sent_at DESC
+  `;
+
+  const params = [req.session.userId];
+
+  const conn = await pool.getConnection();
+  try {
+    const rows = await conn.query(sql, params);
+    conn.release();
+    return rows || [];
+  } catch (err) {
+    conn.release();
+    throw err;
+  }
+}
+
+// Function to accept an invitation
+async function acceptInvitation(req, invitationId) {
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    // First, verify that the invitation belongs to the current professor and is pending
+    const checkInvitationSql = `
+      SELECT id, thesis_id, status
+      FROM committee_invitation
+      WHERE id = ? AND professor_id = ? AND status = 'pending'
+    `;
+    const invitationRows = await conn.query(checkInvitationSql, [invitationId, req.session.userId]);
+
+    if (invitationRows.length === 0) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Invitation not found or not available for acceptance' };
+    }
+
+    const thesisId = invitationRows[0].thesis_id;
+
+    // Check if the thesis already has 2 accepted committee members
+    const acceptedCountSql = `
+      SELECT COUNT(*) as count
+      FROM committee_invitation
+      WHERE thesis_id = ? AND status = 'accepted'
+    `;
+    const countRows = await conn.query(acceptedCountSql, [thesisId]);
+
+    if (countRows[0].count >= 2) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'This thesis already has the maximum number of committee members' };
+    }
+
+    // Update the invitation status to accepted
+    const updateSql = `
+      UPDATE committee_invitation
+      SET status = 'accepted'
+      WHERE id = ? AND professor_id = ?
+    `;
+    const updateResult = await conn.query(updateSql, [invitationId, req.session.userId]);
+
+    if (updateResult.affectedRows === 0) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Failed to accept invitation' };
+    }
+
+    // Update the thesis table to fill member1_id or member2_id
+    const checkThesisMembersSql = `
+      SELECT member1_id, member2_id
+      FROM thesis
+      WHERE id = ?
+    `;
+    const thesisRows = await conn.query(checkThesisMembersSql, [thesisId]);
+
+    if (thesisRows.length > 0) {
+      const thesis = thesisRows[0];
+      let updateThesisSql;
+
+      if (thesis.member1_id === null) {
+        // Fill member1_id if it's null
+        updateThesisSql = `
+          UPDATE thesis
+          SET member1_id = ?
+          WHERE id = ?
+        `;
+        await conn.query(updateThesisSql, [req.session.userId, thesisId]);
+        console.log(`Set member1_id to ${req.session.userId} for thesis ${thesisId}`);
+      } else if (thesis.member2_id === null) {
+        // Fill member2_id if member1_id is filled but member2_id is null
+        updateThesisSql = `
+          UPDATE thesis
+          SET member2_id = ?
+          WHERE id = ?
+        `;
+        await conn.query(updateThesisSql, [req.session.userId, thesisId]);
+        console.log(`Set member2_id to ${req.session.userId} for thesis ${thesisId}`);
+      }
+    }
+
+    // Check if this acceptance makes it the second accepted member
+    const newAcceptedCountSql = `
+      SELECT COUNT(*) as count
+      FROM committee_invitation
+      WHERE thesis_id = ? AND status = 'accepted'
+    `;
+    const newCountRows = await conn.query(newAcceptedCountSql, [thesisId]);
+
+    // If we now have 2 accepted members, cancel all other pending invitations for this thesis
+    if (newCountRows[0].count >= 2) {
+      const cancelPendingSql = `
+        UPDATE committee_invitation
+        SET status = 'rejected'
+        WHERE thesis_id = ? AND status = 'pending'
+      `;
+      await conn.query(cancelPendingSql, [thesisId]);
+
+      console.log(`Cancelled all pending invitations for thesis ${thesisId} as it now has 2 accepted committee members`);
+    }
+
+    await conn.commit();
+    conn.release();
+    return { success: true };
+
+  } catch (err) {
+    await conn.rollback();
+    conn.release();
+    console.error('Error in acceptInvitation:', err);
+    throw err;
+  }
+}
+
+// Function to reject an invitation
+async function rejectInvitation(req, invitationId) {
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    // First, verify that the invitation belongs to the current professor and get thesis_id
+    const checkInvitationSql = `
+      SELECT id, thesis_id, status
+      FROM committee_invitation
+      WHERE id = ? AND professor_id = ? AND status IN ('pending', 'accepted')
+    `;
+    const invitationRows = await conn.query(checkInvitationSql, [invitationId, req.session.userId]);
+
+    if (invitationRows.length === 0) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Invitation not found or not available for rejection' };
+    }
+
+    const thesisId = invitationRows[0].thesis_id;
+    const currentStatus = invitationRows[0].status;
+
+
+    // Update the invitation status to rejected
+    const updateSql = `
+      UPDATE committee_invitation
+      SET status = 'rejected'
+      WHERE id = ? AND professor_id = ?
+    `;
+    const updateResult = await conn.query(updateSql, [invitationId, req.session.userId]);
+
+    if (updateResult.affectedRows === 0) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Failed to reject invitation' };
+    }
+
+    await conn.commit();
+    conn.release();
+    return { success: true };
+
+  } catch (err) {
+    await conn.rollback();
+    conn.release();
+    console.error('Error in rejectInvitation:', err);
+    throw err;
+  }
+}
+
 // Export the router to be used in the main app
-module.exports = router; 
+module.exports = router;

@@ -81,3 +81,28 @@ CREATE TABLE
         CONSTRAINT invitation_thesis FOREIGN KEY (thesis_id) REFERENCES thesis (id) ON DELETE CASCADE ON UPDATE CASCADE,
         CONSTRAINT invitation_professor FOREIGN KEY (professor_id) REFERENCES professor (id) ON DELETE CASCADE ON UPDATE CASCADE
     );
+
+
+   DROP TRIGGER IF EXISTS update_thesis_status_on_acceptance;
+
+   CREATE TRIGGER update_thesis_status_on_acceptance
+AFTER UPDATE ON committee_invitation
+FOR EACH ROW
+BEGIN
+    DECLARE accepted_count INT;
+    -- Only proceed if status changed to 'accepted'
+    IF NEW.status = 'accepted' AND OLD.status != 'accepted' THEN
+        -- Count accepted invitations for this thesis
+        SELECT COUNT(*) INTO accepted_count
+        FROM committee_invitation 
+        WHERE thesis_id = NEW.thesis_id AND status = 'accepted';
+        -- If we now have 2 accepted members, update thesis status and cancel pending invitations
+        IF accepted_count = 2 THEN
+            -- Update thesis status to 'active'
+            UPDATE thesis 
+            SET thesis_status = 'active' 
+            WHERE id = NEW.thesis_id AND thesis_status = 'under-assignment';
+
+        END IF;
+    END IF;
+END;
