@@ -1,18 +1,464 @@
 <!doctype html>
 <html lang="el">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link href="/stylesheets/style.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous"/>
-    <title>Create new Thesis</title>
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet" />
+    <title>Διαχείριση Διπλωματικής Εργασίας</title>
 </head>
 
 <body id="body" class="d-flex flex-column min-vh-100">
     <div id="navbar"></div>
 
     <main class="flex-grow-1">
+        <div class="container mt-4">
+            <h2 class="display-5 text-center mb-4">Διαχείριση Διπλωματικής Εργασίας</h2>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Φόρτωση...</span>
+                </div>
+                <p class="mt-3 text-muted">Φόρτωση πληροφοριών διπλωματικής...</p>
+            </div>
+
+            <!-- No Thesis State -->
+            <div id="noThesisState" class="d-none">
+                <div class="alert alert-info text-center">
+                    <i class="bi bi-info-circle fs-1 mb-3"></i>
+                    <h4>Δεν έχετε ανατεθεί διπλωματική εργασία</h4>
+                    <p class="mb-0">Επικοινωνήστε με έναν καθηγητή για την ανάθεση θέματος διπλωματικής εργασίας.</p>
+                </div>
+            </div>
+
+            <!-- Thesis Information Card -->
+            <div id="thesisInfoCard" class="card mb-4 d-none">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Πληροφορίες Διπλωματικής</h5>
+                    <span id="thesisStatusBadge" class="badge"></span>
+                </div>
+                <div class="card-body">
+                    <h6 id="thesisTitle" class="card-title"></h6>
+                    <p id="thesisDescription" class="card-text text-muted"></p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <small class="text-muted">
+                                <strong>Επιβλέπων Καθηγητής:</strong>
+                                <span id="supervisorName"></span>
+                            </small>
+                        </div>
+                        <div class="col-md-6">
+                            <small class="text-muted">
+                                <strong>Ημερομηνία Ανάθεσης:</strong>
+                                <span id="assignmentDate"></span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Under Assignment Status -->
+            <div id="underAssignmentSection" class="d-none">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-people me-2"></i>
+                            Επιλογή Τριμελούς Επιτροπής
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-4">
+                            Επιλέξτε δύο καθηγητές που θα αποτελέσουν μέλη της τριμελούς επιτροπής σας.
+                            Μόλις δύο καθηγητές αποδεχτούν την πρόσκληση, η διπλωματική θα μεταβεί αυτόματα σε κατάσταση
+                            "Ενεργή".
+                        </p>
+
+                        <!-- Committee Members Status -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h6 class="text-primary">Μέλη Επιτροπής</h6>
+                                <div id="committeeMembers" class="list-group">
+                                    <!-- Committee members will be populated here -->
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-primary">Εκκρεμείς Προσκλήσεις</h6>
+                                <div id="pendingInvitations" class="list-group">
+                                    <!-- Pending invitations will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Add Committee Member -->
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">Προσθήκη Μέλους Επιτροπής</h6>
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="professorSearch"
+                                                placeholder="Αναζήτηση καθηγητή (όνομα ή τμήμα)...">
+                                            <button class="btn btn-outline-primary" id="searchProfessorBtn">
+                                                <i class="bi bi-search"></i> Αναζήτηση
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div id="inviteStatus" class="text-muted small">
+                                            Καλή τύχη !
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Search Results -->
+                                <div id="professorSearchResults" class="mt-3 d-none">
+                                    <div id="professorList" class="list-group">
+                                        <!-- Professor search results will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Under Examination Status -->
+            <div id="underExaminationSection" class="d-none">
+                <!-- Thesis Upload -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-file-earmark-text me-2"></i>
+                            Ανέβασμα Κειμένου Διπλωματικής
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            Ανεβάστε το προσχέδιο της διπλωματικής σας εργασίας που θα είναι ορατό σε όλα τα μέλη της
+                            τριμελούς επιτροπής.
+                        </p>
+
+                        <!-- Current Thesis File -->
+                        <div id="currentThesisFile" class="alert alert-success d-none">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-file-pdf me-2"></i>
+                                    <strong>Τρέχον αρχείο:</strong> <span id="currentFileName"></span>
+                                    <br><small class="text-muted">Ανέβηκε: <span id="uploadDate"></span></small>
+                                </div>
+                                <button class="btn btn-outline-primary btn-sm" id="downloadThesisBtn">
+                                    <i class="bi bi-download"></i> Λήψη
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Upload Form -->
+                        <div class="row">
+                            <div class="col-md-8">
+                                <input type="file" class="form-control" id="thesisFileInput" accept=".pdf,.doc,.docx">
+                                <div class="form-text">Υποστηριζόμενοι τύποι: PDF, DOC, DOCX (μέγιστο 50MB)</div>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-primary w-100" id="uploadThesisBtn">
+                                    <i class="bi bi-upload"></i> Ανέβασμα
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Materials -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-link-45deg me-2"></i>
+                            Επιπλέον Υλικό
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            Προσθέστε συνδέσμους σε επιπλέον υλικό (π.χ. Google Drive, YouTube videos, κ.λπ.)
+                        </p>
+
+                        <!-- Existing Links -->
+                        <div id="existingLinks" class="mb-3">
+                            <!-- Existing links will be populated here -->
+                        </div>
+
+                        <!-- Add New Link -->
+                        <div class="row">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" id="linkTitle" placeholder="Τίτλος συνδέσμου">
+                            </div>
+                            <div class="col-md-6">
+                                <input type="url" class="form-control" id="linkUrl" placeholder="https://...">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-outline-primary w-100" id="addLinkBtn">
+                                    <i class="bi bi-plus"></i> Προσθήκη
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Examination Details -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-calendar-event me-2"></i>
+                            Στοιχεία Εξέτασης
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            Καταγράψτε την ημερομηνία και ώρα εξέτασης που έχετε συμφωνήσει με την τριμελή επιτροπή.
+                        </p>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="examDate" class="form-label">Ημερομηνία Εξέτασης</label>
+                                <input type="date" class="form-control" id="examDate">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="examTime" class="form-label">Ώρα Εξέτασης</label>
+                                <input type="time" class="form-control" id="examTime">
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-12">
+                                <label for="examType" class="form-label">Τρόπος Εξέτασης</label>
+                                <select class="form-select" id="examType">
+                                    <option value="">Επιλέξτε τρόπο εξέτασης</option>
+                                    <option value="in-person">Δια ζώσης</option>
+                                    <option value="online">Διαδικτυακά</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Examination Location/Link -->
+                        <div class="row mt-3">
+                            <div class="col-md-12">
+                                <label for="examLocation" class="form-label"
+                                    id="examLocationLabel">Τοποθεσία/Σύνδεσμος</label>
+                                <input type="text" class="form-control" id="examLocation"
+                                    placeholder="Αίθουσα εξέτασης ή σύνδεσμος τηλεδιάσκεψης">
+                                <div class="form-text" id="examLocationHelp">
+                                    Για δια ζώσης εξέταση: Αίθουσα και κτίριο. Για διαδικτυακή: Σύνδεσμος τηλεδιάσκεψης.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <button class="btn btn-success" id="saveExamDetailsBtn">
+                                <i class="bi bi-save"></i> Αποθήκευση Στοιχείων Εξέτασης
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Examination Report -->
+                <div id="examinationReport" class="card mb-4 d-none">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-file-text me-2"></i>
+                            Αναφορά Εξέτασης
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            Η αναφορά εξέτασης θα είναι διαθέσιμη αφού καταγραφούν οι βαθμοί από τα μέλη της τριμελούς
+                            επιτροπής.
+                        </p>
+                        <button class="btn btn-primary" id="viewReportBtn">
+                            <i class="bi bi-eye"></i> Προβολή Αναφοράς Εξέτασης
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Library Repository Link -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-archive me-2"></i>
+                            Αποθετήριο Βιβλιοθήκης (Νεμέρτης)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            Καταγράψτε τον σύνδεσμο προς το αποθετήριο της βιβλιοθήκης όπου βρίσκεται το τελικό κείμενο
+                            της διπλωματικής σας.
+                        </p>
+                        <div class="row">
+                            <div class="col-md-10">
+                                <input type="url" class="form-control" id="repositoryLink"
+                                    placeholder="https://nemertes.lis.upatras.gr/...">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-success w-100" id="saveRepositoryBtn">
+                                    <i class="bi bi-save"></i> Αποθήκευση
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Completed Status -->
+            <div id="completedSection" class="d-none">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Ολοκληρωμένη Διπλωματική Εργασία
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-success">
+                            <i class="bi bi-trophy me-2"></i>
+                            <strong>Συγχαρητήρια!</strong> Η διπλωματική σας εργασία έχει ολοκληρωθεί επιτυχώς.
+                        </div>
+
+                        <!-- Thesis Information (Read-only) -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h6 class="text-primary">Στοιχεία Εξέτασης</h6>
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <p class="mb-1"><strong>Ημερομηνία:</strong> <span
+                                                id="completedExamDate"></span></p>
+                                        <p class="mb-1"><strong>Ώρα:</strong> <span id="completedExamTime"></span></p>
+                                        <p class="mb-1"><strong>Τρόπος:</strong> <span id="completedExamType"></span>
+                                        </p>
+                                        <p class="mb-0"><strong>Τοποθεσία:</strong> <span
+                                                id="completedExamLocation"></span></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-primary">Τριμελής Επιτροπή</h6>
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <div id="completedCommitteeMembers">
+                                            <!-- Committee members will be populated here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Final Grade -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <div class="card border-success">
+                                    <div class="card-header bg-success text-white">
+                                        <h6 class="mb-0">
+                                            <i class="bi bi-award me-2"></i>
+                                            Τελικός Βαθμός
+                                        </h6>
+                                    </div>
+                                    <div class="card-body text-center">
+                                        <h2 class="display-4 text-success mb-0" id="finalGrade">-</h2>
+                                        <p class="text-muted">στα 10</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="row">
+                            <div class="col-md-4">
+                                <button class="btn btn-primary w-100 mb-2" id="viewCompletedReportBtn">
+                                    <i class="bi bi-file-text me-2"></i>
+                                    Προβολή Αναφοράς Εξέτασης
+                                </button>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-outline-primary w-100 mb-2" id="downloadCompletedThesisBtn">
+                                    <i class="bi bi-download me-2"></i>
+                                    Λήψη Τελικού Κειμένου
+                                </button>
+                            </div>
+                            <div class="col-md-4">
+                                <a class="btn btn-outline-success w-100 mb-2" id="repositoryLinkBtn" target="_blank">
+                                    <i class="bi bi-archive me-2"></i>
+                                    Αποθετήριο Βιβλιοθήκης
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Status History -->
+                        <div class="mt-4">
+                            <h6 class="text-primary">Ιστορικό Κατάστασης</h6>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div id="statusHistory">
+                                        <!-- Status history will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modals -->
+
+        <!-- Professor Invitation Modal -->
+        <div class="modal fade" id="inviteProfessorModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Πρόσκληση Καθηγητή</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Θέλετε να προσκαλέσετε τον καθηγητή:</p>
+                        <div id="professorInviteDetails" class="border p-3 bg-light rounded">
+                            <!-- Professor details will be shown here -->
+                        </div>
+                        <div class="mt-3">
+                            <label for="invitationMessage" class="form-label">Μήνυμα Πρόσκλησης (προαιρετικό)</label>
+                            <textarea class="form-control" id="invitationMessage" rows="3"
+                                placeholder="Προσθέστε ένα προσωπικό μήνυμα στην πρόσκληση..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Άκυρο</button>
+                        <button id="confirmInviteBtn" type="button" class="btn btn-primary">Αποστολή Πρόσκλησης</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Examination Report Modal -->
+        <div class="modal fade" id="examinationReportModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Αναφορά Εξέτασης Διπλωματικής Εργασίας</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="reportContent">
+                            <!-- Report content will be loaded here -->
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Κλείσιμο</button>
+                        <button type="button" class="btn btn-primary" id="printReportBtn">
+                            <i class="bi bi-printer"></i> Εκτύπωση
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <div id="footer"></div>
@@ -20,6 +466,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous">
         </script>
+    <script src="/js/errorOrSuccessModal.js"></script>
     <script src="/js/loadPartials.js"></script>
+    <script src="/js/manageThesis.js"></script>
 </body>
+
 </html>

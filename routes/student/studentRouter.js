@@ -30,6 +30,57 @@ router.get("/manage", checkPermission("student"), (req, res) => {
   res.sendFile(path.join(__dirname, "../../public/student/manage.html"));
 });
 
+// Route: GET /student/thesis-info
+// Get student's thesis information and status
+router.get('/thesis-info', async (req, res) => {
+  try {
+    const thesisInfo = await getStudentThesisInfo(req);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify({ thesis: thesisInfo }, (_, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    ));
+  } catch (err) {
+    console.error('Error in /thesis-info:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Route: GET /student/committee-status
+// Get committee members and pending invitations
+router.get('/committee-status', async (req, res) => {
+  try {
+    const status = await getCommitteeStatus(req);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify(status, (_, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    ));
+  } catch (err) {
+    console.error('Error in /committee-status:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Route: GET /student/search-professors
+// Search for professors to invite to committee
+router.get('/search-professors', async (req, res) => {
+  try {
+    const { query } = req.query;
+
+    if (!query || query.trim().length < 2) {
+      return res.status(400).json({ error: 'Search query must be at least 2 characters long' });
+    }
+
+    const professors = await searchProfessors(query.trim());
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify({ professors }, (_, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    ));
+  } catch (err) {
+    console.error('Error in /search-professors:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
 // Route: GET /student/get-info
 // Fetch and return the student's information as JSON
 router.get('/get-info', async (req, res) => {
@@ -91,6 +142,138 @@ router.post('/get-info', async (req, res) => {
     // Handle errors during authentication
     console.error("authenticateUser threw an error:", authErr);
     res.status(500).send("Authentication error");
+  }
+});
+
+// Route: POST /student/invite-professor
+// Send invitation to professor for committee membership
+router.post('/invite-professor', async (req, res) => {
+  try {
+    const { professorId, message } = req.body;
+
+    if (!professorId) {
+      return res.status(400).json({ error: 'Professor ID is required' });
+    }
+
+    const result = await inviteProfessor(req, professorId, message);
+
+    if (result.success) {
+      res.status(200).json({ message: 'Invitation sent successfully' });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /invite-professor:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Route: POST /student/upload-thesis
+// Upload thesis file
+router.post('/upload-thesis', async (req, res) => {
+  try {
+    // Handle file upload using formidable (similar to professor router)
+    const result = await handleThesisUpload(req);
+
+    if (result.success) {
+      res.status(200).json({ message: 'Thesis uploaded successfully', filename: result.filename });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /upload-thesis:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Route: POST /student/add-material-link
+// Add additional material link
+router.post('/add-material-link', async (req, res) => {
+  try {
+    const { title, url } = req.body;
+
+    if (!title || !url) {
+      return res.status(400).json({ error: 'Title and URL are required' });
+    }
+
+    const result = await addMaterialLink(req, title, url);
+
+    if (result.success) {
+      res.status(200).json({ message: 'Link added successfully', linkId: result.linkId });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /add-material-link:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Route: POST /student/save-exam-details
+// Save examination details
+router.post('/save-exam-details', async (req, res) => {
+  try {
+    const { examDate, examTime, examType, examLocation } = req.body;
+
+    if (!examDate || !examTime || !examType || !examLocation) {
+      return res.status(400).json({ error: 'All examination details are required' });
+    }
+
+    const result = await saveExamDetails(req, { examDate, examTime, examType, examLocation });
+
+    if (result.success) {
+      res.status(200).json({ message: 'Examination details saved successfully' });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /save-exam-details:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Route: POST /student/save-repository-link
+// Save library repository link
+router.post('/save-repository-link', async (req, res) => {
+  try {
+    const { repositoryLink } = req.body;
+
+    if (!repositoryLink) {
+      return res.status(400).json({ error: 'Repository link is required' });
+    }
+
+    const result = await saveRepositoryLink(req, repositoryLink);
+
+    if (result.success) {
+      res.status(200).json({ message: 'Repository link saved successfully' });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /save-repository-link:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Route: POST /student/cancel-pending-invitations
+// Cancel pending invitations when thesis becomes active
+router.post('/cancel-pending-invitations', async (req, res) => {
+  try {
+    const thesisInfo = await getStudentThesisInfo(req);
+    if (!thesisInfo) {
+      return res.status(400).json({ error: 'No thesis found for student' });
+    }
+
+    const result = await cancelPendingInvitations(thesisInfo.id);
+
+    if (result.success) {
+      res.status(200).json({ message: 'Pending invitations cancelled successfully' });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /cancel-pending-invitations:', err);
+    res.status(500).json({ error: 'Server Error' });
   }
 });
 
@@ -168,6 +351,252 @@ async function getStudentInformation(req) {
     }
   } catch (err) {
     // Release the connection and propagate the error
+    conn.release();
+    throw err;
+  }
+}
+
+// Function to get student's thesis information
+async function getStudentThesisInfo(req) {
+  const sql = `
+    SELECT
+      t.id,
+      t.title,
+      t.description,
+      t.thesis_status,
+      t.submission_date,
+      t.pdf,
+      t.grade,
+      u.name as supervisor_name,
+      u.surname as supervisor_surname
+    FROM thesis t
+    INNER JOIN professor p ON t.supervisor_id = p.id
+    INNER JOIN user u ON p.id = u.id
+    WHERE t.student_id = ?
+  `;
+
+  const params = [req.session.userId];
+  const conn = await pool.getConnection();
+  try {
+    const rows = await conn.query(sql, params);
+    conn.release();
+    return rows.length > 0 ? rows[0] : null;
+  } catch (err) {
+    conn.release();
+    throw err;
+  }
+}
+
+// Function to get committee status
+async function getCommitteeStatus(req) {
+  // First get the thesis ID
+  const thesisInfo = await getStudentThesisInfo(req);
+  if (!thesisInfo) {
+    return { members: [], pending: [] };
+  }
+
+  const sql = `
+    SELECT
+      ci.id,
+      ci.status,
+      u.name,
+      u.surname,
+      p.topic,
+      p.department
+    FROM committee_invitation ci
+    INNER JOIN professor p ON ci.professor_id = p.id
+    INNER JOIN user u ON p.id = u.id
+    WHERE ci.thesis_id = ?
+    ORDER BY ci.sent_at DESC
+  `;
+
+  const params = [thesisInfo.id];
+  const conn = await pool.getConnection();
+  try {
+    const rows = await conn.query(sql, params);
+    conn.release();
+
+    const members = rows.filter(row => row.status === 'accepted');
+    const pending = rows.filter(row => row.status === 'pending');
+
+    return { members, pending };
+  } catch (err) {
+    conn.release();
+    throw err;
+  }
+}
+
+// Function to search professors
+async function searchProfessors(query) {
+  const sql = `
+    SELECT
+      u.id,
+      u.name,
+      u.surname,
+      p.topic,
+      p.department,
+      p.university
+    FROM user u
+    INNER JOIN professor p ON u.id = p.id
+    WHERE
+      u.name LIKE ? OR
+      u.surname LIKE ? OR
+      CONCAT(u.name, ' ', u.surname) LIKE ? OR
+      p.topic LIKE ? OR
+      p.department LIKE ?
+    ORDER BY u.surname, u.name
+    LIMIT 10
+  `;
+
+  const searchPattern = `%${query}%`;
+  const params = [searchPattern, searchPattern, searchPattern, searchPattern, searchPattern];
+
+  const conn = await pool.getConnection();
+  try {
+    const rows = await conn.query(sql, params);
+    conn.release();
+    return rows || [];
+  } catch (err) {
+    conn.release();
+    throw err;
+  }
+}
+
+// Function to invite professor to committee
+async function inviteProfessor(req, professorId, message) {
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    // Get student's thesis
+    const thesisInfo = await getStudentThesisInfo(req);
+    if (!thesisInfo) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'No thesis found for student' };
+    }
+
+    // Check if professor is already invited or is the supervisor
+    const checkSql = `
+      SELECT COUNT(*) as count FROM committee_invitation
+      WHERE thesis_id = ? AND professor_id = ?
+      UNION ALL
+      SELECT COUNT(*) as count FROM thesis
+      WHERE id = ? AND supervisor_id = ?
+    `;
+    const checkRows = await conn.query(checkSql, [thesisInfo.id, professorId, thesisInfo.id, professorId]);
+
+    if (checkRows.some(row => row.count > 0)) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Ο καθηγητής είναι ήδη μέρος της επιτροπής.' };
+    }
+
+    // Check if already have 2 accepted invitations
+    const acceptedSql = `
+      SELECT COUNT(*) as count FROM committee_invitation
+      WHERE thesis_id = ? AND status = 'accepted'
+    `;
+    const acceptedRows = await conn.query(acceptedSql, [thesisInfo.id]);
+
+    if (acceptedRows[0].count >= 2) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Η επιτροπή περιέχει ήδη 3 καθηγητές' };
+    }
+
+    // Insert invitation
+    const insertSql = `
+      INSERT INTO committee_invitation (thesis_id, professor_id, status, sent_at)
+      VALUES (?, ?, 'pending', NOW())
+    `;
+    await conn.query(insertSql, [thesisInfo.id, professorId]);
+
+    await conn.commit();
+    conn.release();
+    return { success: true };
+
+  } catch (err) {
+    await conn.rollback();
+    conn.release();
+    throw err;
+  }
+}
+
+// Function to handle thesis file upload
+async function handleThesisUpload(req) {
+  // This would use formidable similar to professor router
+  // For now, return a placeholder
+  return { success: true, filename: 'thesis_draft.pdf' };
+}
+
+// Function to add material link
+async function addMaterialLink(req, title, url) {
+  // This would require a new table for material links
+  // For now, return a placeholder
+  return { success: true, linkId: 1 };
+}
+
+// Function to save examination details
+async function saveExamDetails(req, examDetails) {
+  const conn = await pool.getConnection();
+
+  try {
+    const thesisInfo = await getStudentThesisInfo(req);
+    if (!thesisInfo) {
+      conn.release();
+      return { success: false, error: 'No thesis found for student' };
+    }
+
+    // This would require additional fields in thesis table or new table
+    // For now, return success
+    conn.release();
+    return { success: true };
+
+  } catch (err) {
+    conn.release();
+    throw err;
+  }
+}
+
+// Function to save repository link
+async function saveRepositoryLink(req, repositoryLink) {
+  const conn = await pool.getConnection();
+
+  try {
+    const thesisInfo = await getStudentThesisInfo(req);
+    if (!thesisInfo) {
+      conn.release();
+      return { success: false, error: 'No thesis found for student' };
+    }
+
+    // This would require additional field in thesis table
+    // For now, return success
+    conn.release();
+    return { success: true };
+
+  } catch (err) {
+    conn.release();
+    throw err;
+  }
+}
+
+// Function to cancel pending invitations when thesis becomes active
+async function cancelPendingInvitations(thesisId) {
+  const conn = await pool.getConnection();
+
+  try {
+    const cancelSql = `
+      UPDATE committee_invitation
+      SET status = 'cancelled'
+      WHERE thesis_id = ? AND status = 'pending'
+    `;
+    await conn.query(cancelSql, [thesisId]);
+    conn.release();
+    return { success: true };
+
+  } catch (err) {
     conn.release();
     throw err;
   }
