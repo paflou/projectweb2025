@@ -387,7 +387,7 @@ async function handleConfirmInvite() {
 
     } catch (error) {
         console.error('Error sending invitation:', error);
-        showError(`Σφάλμα κατά την αποστολή πρόσκλησης: ${error.message}`);
+        showError(`Σφάλμα κατά την αποστολή πρόσκλησης: <br>${error.message}`);
     } finally {
         confirmInviteBtn.disabled = false;
         confirmInviteBtn.innerHTML = 'Αποστολή Πρόσκλησης';
@@ -654,14 +654,6 @@ function updateCurrentFileDisplay(filename) {
         uploadDate.textContent = new Date().toLocaleDateString('el-GR');
         currentThesisFile.classList.remove('d-none');
     }
-}
-
-function showError(message) {
-    alert(message); // Replace with toast notification if available
-}
-
-function showSuccess(message) {
-    alert(message); // Replace with toast notification if available
 }
 
 function escapeHtml(text) {

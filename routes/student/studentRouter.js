@@ -490,7 +490,7 @@ async function inviteProfessor(req, professorId, message) {
     if (checkRows.some(row => row.count > 0)) {
       await conn.rollback();
       conn.release();
-      return { success: false, error: 'Professor is already involved in this thesis' };
+      return { success: false, error: 'Ο καθηγητής είναι ήδη μέρος της επιτροπής.' };
     }
 
     // Check if already have 2 accepted invitations
@@ -503,7 +503,7 @@ async function inviteProfessor(req, professorId, message) {
     if (acceptedRows[0].count >= 2) {
       await conn.rollback();
       conn.release();
-      return { success: false, error: 'Committee already has maximum members' };
+      return { success: false, error: 'Η επιτροπή περιέχει ήδη 3 καθηγητές' };
     }
 
     // Insert invitation

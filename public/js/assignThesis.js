@@ -606,18 +606,6 @@ function hideSearchResults() {
     studentResults.classList.add('d-none');
 }
 
-// Show error message
-function showError(message) {
-    // You can implement a toast notification or alert here
-    alert(message);
-}
-
-// Show success message
-function showSuccess(message) {
-    // You can implement a toast notification or alert here
-    alert(message);
-}
-
 // Utility function to escape HTML
 function escapeHtml(text) {
     if (!text) return '';
