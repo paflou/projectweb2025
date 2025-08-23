@@ -82,7 +82,8 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Είστε σίγουροι ότι θέλετε να αποδεχτείτε την πρόσκληση για συμμετοχή στην τριμελή επιτροπή της διπλωματικής:</p>
+                    <p>Είστε σίγουροι ότι θέλετε να αποδεχτείτε την πρόσκληση για συμμετοχή στην τριμελή επιτροπή της
+                        διπλωματικής:</p>
                     <p><strong id="acceptThesisTitle"></strong></p>
                     <p class="text-muted">Μετά την αποδοχή, θα γίνετε μέλος της τριμελούς επιτροπής αξιολόγησης.</p>
                 </div>
@@ -103,7 +104,8 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Είστε σίγουροι ότι θέλετε να απορρίψετε την πρόσκληση για συμμετοχή στην τριμελή επιτροπή της διπλωματικής:</p>
+                    <p>Είστε σίγουροι ότι θέλετε να απορρίψετε την πρόσκληση για συμμετοχή στην τριμελή επιτροπή της
+                        διπλωματικής:</p>
                     <p><strong id="rejectThesisTitle"></strong></p>
                     <p class="text-muted">Μετά την απόρριψη, η πρόσκληση θα αφαιρεθεί από τη λίστα σας.</p>
                 </div>
@@ -115,6 +117,28 @@
         </div>
     </div>
 
+    <!-- Confirmation Modal for Leave -->
+    <div class="modal fade" id="leaveModal" tabindex="-1" aria-labelledby="leaveModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="leaveModalLabel">Έξοδος από τριμελή επιτροπή</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Είστε σίγουροι ότι θέλετε να βγείτε απο την τριμελή επιτροπή της
+                        διπλωματικής:</p>
+                    <p><strong id="leaveThesisTitle"></strong></p>
+                    <p class="text-muted">Μετά την απόρριψη, η πρόσκληση θα αφαιρεθεί από τη λίστα σας.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Άκυρο</button>
+                    <button type="button" class="btn btn-danger" id="confirmLeaveBtn">Έξοδος</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Success/Error Toast -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3">
         <div id="responseToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">

@@ -13,10 +13,12 @@ const invitationsTableBody = document.getElementById('invitationsTableBody');
 // Modal elements
 const acceptModal = new bootstrap.Modal(document.getElementById('acceptModal'));
 const rejectModal = new bootstrap.Modal(document.getElementById('rejectModal'));
+const leaveModal = new bootstrap.Modal(document.getElementById('leaveModal'));
 const acceptThesisTitle = document.getElementById('acceptThesisTitle');
 const rejectThesisTitle = document.getElementById('rejectThesisTitle');
 const confirmAcceptBtn = document.getElementById('confirmAcceptBtn');
 const confirmRejectBtn = document.getElementById('confirmRejectBtn');
+const confirmLeaveBtn = document.getElementById('confirmLeaveBtn');
 
 // Toast elements
 const responseToast = new bootstrap.Toast(document.getElementById('responseToast'));
@@ -24,7 +26,7 @@ const toastTitle = document.getElementById('toastTitle');
 const toastMessage = document.getElementById('toastMessage');
 
 // Initialize the page when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     loadInvitations();
     setupEventListeners();
 });
@@ -33,27 +35,28 @@ document.addEventListener('DOMContentLoaded', function() {
 function setupEventListeners() {
     confirmAcceptBtn.addEventListener('click', handleAcceptInvitation);
     confirmRejectBtn.addEventListener('click', handleRejectInvitation);
+    confirmLeaveBtn.addEventListener('click', handleLeavecomittee);
 }
 
 // Load invitations from the server
 async function loadInvitations() {
     try {
         showLoading();
-        
+
         const response = await fetch('/prof/get-invitations');
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
-        
+
         if (data.invitations && data.invitations.length > 0) {
             displayInvitations(data.invitations);
         } else {
             showNoInvitations();
         }
-        
+
     } catch (error) {
         console.error('Error loading invitations:', error);
         showError('Παρουσιάστηκε σφάλμα κατά τη φόρτωση των προσκλήσεων. Παρακαλώ δοκιμάστε ξανά.');
@@ -64,9 +67,9 @@ async function loadInvitations() {
 function displayInvitations(invitations) {
     hideAllMessages();
     invitationsContainer.classList.remove('d-none');
-    
+
     invitationsTableBody.innerHTML = '';
-    
+
     invitations.forEach(invitation => {
         const row = createInvitationRow(invitation);
         invitationsTableBody.appendChild(row);
@@ -76,34 +79,36 @@ function displayInvitations(invitations) {
 // Create a table row for an invitation
 function createInvitationRow(invitation) {
     const row = document.createElement('tr');
-    
+
     // Format date
     const invitationDate = new Date(invitation.invitation_date).toLocaleDateString('el-GR');
-    
+
     // Determine status badge
     const statusBadge = getStatusBadge(invitation.status);
-    
+
     // Create action buttons based on status
     const actionButtons = createActionButtons(invitation);
-    
+
     row.innerHTML = `
-        <td>
-            <div class="fw-bold">${escapeHtml(invitation.thesis_title)}</div>
-            <small class="text-muted">${escapeHtml(invitation.thesis_description || '')}</small>
-        </td>
-        <td>
-            <div>${escapeHtml(invitation.supervisor_name)} ${escapeHtml(invitation.supervisor_surname)}</div>
-            <small class="text-muted">${escapeHtml(invitation.supervisor_email)}</small>
-        </td>
-        <td>
-            <div>${escapeHtml(invitation.student_name)} ${escapeHtml(invitation.student_surname)}</div>
-            <small class="text-muted">ΑΜ: ${escapeHtml(invitation.student_number)}</small>
-        </td>
-        <td>${invitationDate}</td>
-        <td>${statusBadge}</td>
-        <td class="text-center">${actionButtons}</td>
-    `;
-    
+    <td>
+        <div class="fw-bold">${escapeHtml(invitation.thesis_title)}</div>
+        <small class="text-muted">${escapeHtml(invitation.thesis_description || '')}</small>
+        <div class="d-none thesis-id" id="thesisId">${invitation.thesis_id}</div>
+    </td>
+    <td>
+        <div>${escapeHtml(invitation.supervisor_name)} ${escapeHtml(invitation.supervisor_surname)}</div>
+        <small class="text-muted">${escapeHtml(invitation.supervisor_email)}</small>
+    </td>
+    <td>
+        <div>${escapeHtml(invitation.student_name)} ${escapeHtml(invitation.student_surname)}</div>
+        <small class="text-muted">ΑΜ: ${escapeHtml(invitation.student_number)}</small>
+    </td>
+    <td>${invitationDate}</td>
+    <td>${statusBadge}</td>
+    <td class="text-center">${actionButtons}</td>
+`;
+
+
     return row;
 }
 
@@ -132,9 +137,14 @@ function createActionButtons(invitation) {
                 <i class="bi bi-x-lg"></i> Απόρριψη
             </button>
         `;
-    } else {
-        return '<span class="text-muted">Δεν υπάρχουν ενέργειες</span>';
+    } else if (invitation.status === 'accepted') {
+        return `
+            <button class="btn btn-danger btn-sm" onclick="showLeaveModal(${invitation.id}, '${escapeHtml(invitation.thesis_title)}')">
+                <i class="bi bi-x-lg"></i> Έξοδος
+            </button>
+        `;
     }
+    return 'Δεν υπάρχουν διαθέσιμες ενέργειες';
 }
 
 // Show accept confirmation modal
@@ -153,6 +163,14 @@ function showRejectModal(invitationId, thesisTitle) {
     rejectModal.show();
 }
 
+// Show leave confirmation modal
+function showLeaveModal(invitationId, thesisTitle) {
+    currentInvitationId = invitationId;
+    currentThesisTitle = thesisTitle;
+    rejectThesisTitle.textContent = thesisTitle;
+    leaveModal.show();
+}
+
 // Handle accept invitation
 async function handleAcceptInvitation() {
     try {
@@ -165,21 +183,21 @@ async function handleAcceptInvitation() {
                 invitationId: currentInvitationId
             })
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        const result = await response.json();
-        
+
+        await response.json();
+
         acceptModal.hide();
         showToast('Επιτυχία', 'Η πρόσκληση αποδέχθηκε επιτυχώς!', 'success');
-        
+
         // Reload invitations to reflect changes
         setTimeout(() => {
             loadInvitations();
         }, 1000);
-        
+
     } catch (error) {
         console.error('Error accepting invitation:', error);
         acceptModal.hide();
@@ -199,21 +217,59 @@ async function handleRejectInvitation() {
                 invitationId: currentInvitationId
             })
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        const result = await response.json();
-        
+
+        await response.json();
+
         rejectModal.hide();
         showToast('Επιτυχία', 'Η πρόσκληση απορρίφθηκε επιτυχώς!', 'success');
-        
+
         // Reload invitations to reflect changes
         setTimeout(() => {
             loadInvitations();
         }, 1000);
-        
+
+    } catch (error) {
+        console.error('Error rejecting invitation:', error);
+        rejectModal.hide();
+        showToast('Σφάλμα', 'Παρουσιάστηκε σφάλμα κατά την απόρριψη της πρόσκλησης.', 'error');
+    }
+}
+
+// Handle reject invitation
+async function handleLeavecomittee() {
+    const thesisId = document.getElementById('thesisId').textContent;
+
+    try {
+        const response = await fetch('/prof/leave-comittee', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                thesisId: thesisId,
+                invitationId: currentInvitationId
+
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        await response.json();
+
+        rejectModal.hide();
+        showToast('Επιτυχία', 'Η πρόσκληση απορρίφθηκε επιτυχώς!', 'success');
+
+        // Reload invitations to reflect changes
+        setTimeout(() => {
+            loadInvitations();
+        }, 1000);
+
     } catch (error) {
         console.error('Error rejecting invitation:', error);
         rejectModal.hide();
@@ -252,20 +308,20 @@ function hideAllMessages() {
 function showToast(title, message, type) {
     toastTitle.textContent = title;
     toastMessage.textContent = message;
-    
+
     const toastElement = document.getElementById('responseToast');
     const toastHeader = toastElement.querySelector('.toast-header');
-    
+
     // Remove existing type classes
     toastHeader.classList.remove('bg-success', 'bg-danger', 'text-white');
-    
+
     // Add appropriate styling based on type
     if (type === 'success') {
         toastHeader.classList.add('bg-success', 'text-white');
     } else if (type === 'error') {
         toastHeader.classList.add('bg-danger', 'text-white');
     }
-    
+
     responseToast.show();
 }
 
@@ -279,5 +335,5 @@ function escapeHtml(text) {
         '"': '&quot;',
         "'": '&#039;'
     };
-    return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
+    return text.toString().replace(/[&<>"']/g, function (m) { return map[m]; });
 }

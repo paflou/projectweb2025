@@ -65,7 +65,7 @@ async function updateThesis(req, res, fields, safeName) {
     WHERE id = ? AND supervisor_id = ?
     `;
     params = [fields.title, fields.summary, safeName, fields.id, req.session.userId]
-    
+
   }
   else {
     sql = `
@@ -459,6 +459,29 @@ router.post('/reject-invitation', async (req, res) => {
   }
 });
 
+// Route: POST /professor/leave-comittee
+// Leave a committee for a thesis
+router.post('/leave-comittee', async (req, res) => {
+  try {
+    const { thesisId, invitationId } = req.body;
+
+    if (!thesisId) {
+      return res.status(400).json({ error: 'thesis ID is required' });
+    }
+
+    const result = await leaveComittee(req, thesisId, invitationId);
+
+    if (result.success) {
+      res.status(200).json({ message: 'Left the comittee successfully' });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /leave-comittee', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
 // Function to search for students by student number or name (only students without thesis)
 async function searchStudents(query) {
   const sql = `
@@ -637,50 +660,55 @@ async function assignThesisToStudent(req, thesisId, studentId) {
   }
 }
 
-// Function to cancel a thesis assignment
 async function cancelThesisAssignment(req, thesisId) {
   const conn = await pool.getConnection();
 
   try {
-    // Start transaction
     await conn.beginTransaction();
 
-    // First, verify that the thesis belongs to the current professor and is assigned
     const checkThesisSql = `
       SELECT id, title, student_id
       FROM thesis
       WHERE id = ? AND supervisor_id = ? AND thesis_status = 'under-assignment'
     `;
-    const thesisRows = await conn.query(checkThesisSql, [thesisId, req.session.userId]);
+    const thesisRow = await conn.query(checkThesisSql, [thesisId, req.session.userId]);
+    console.log('DEBUG checkThesisSql result:', thesisRow);
 
-    if (thesisRows.length === 0) {
+    if (!thesisRow) {
       await conn.rollback();
       conn.release();
       return { success: false, error: 'Thesis not found or not available for cancellation' };
     }
 
-    // Check if thesis is actually assigned to a student
-    if (thesisRows[0].student_id === null) {
+    if (thesisRow.student_id === null) {
       await conn.rollback();
       conn.release();
       return { success: false, error: 'Thesis is not currently assigned to any student' };
     }
 
-    // Remove the student assignment by setting student_id to NULL
+    const deleteInvitationsSql = `
+      DELETE FROM committee_invitation
+      WHERE thesis_id = ?
+    `;
+    await conn.query(deleteInvitationsSql, [thesisId]);
+
     const updateSql = `
       UPDATE thesis
-      SET student_id = NULL
+      SET 
+        student_id = NULL,
+        member1_id = NULL,
+        member2_id = NULL,
+        thesis_status = 'under-assignment'
       WHERE id = ? AND supervisor_id = ?
     `;
     const updateResult = await conn.query(updateSql, [thesisId, req.session.userId]);
 
-    if (updateResult.affectedRows === 0) {
+    if (!updateResult || updateResult.affectedRows === 0) {
       await conn.rollback();
       conn.release();
       return { success: false, error: 'Failed to cancel assignment' };
     }
 
-    // Commit transaction
     await conn.commit();
     conn.release();
 
@@ -694,6 +722,8 @@ async function cancelThesisAssignment(req, thesisId) {
   }
 }
 
+
+
 // Function to get professor invitations
 async function getProfessorInvitations(req) {
   const sql = `
@@ -701,6 +731,7 @@ async function getProfessorInvitations(req) {
       ci.id,
       ci.status,
       ci.sent_at as invitation_date,
+      t.id as thesis_id,
       t.title as thesis_title,
       t.description as thesis_description,
       u.name as student_name,
@@ -896,6 +927,56 @@ async function rejectInvitation(req, invitationId) {
     throw err;
   }
 }
+
+// Function to remove the professor from the comittee
+async function leaveComittee(req, thesisId, invitationId) {
+  const conn = await pool.getConnection();
+  console.log('DEBUG: Leaving comittee for thesisId', thesisId, 'by professorId', req.session.userId);
+  try {
+    await conn.beginTransaction();
+
+    const removeProfessorSql = `
+      UPDATE thesis
+      SET 
+          member1_id = CASE WHEN member1_id = ? THEN NULL ELSE member1_id END,
+          member2_id = CASE WHEN member2_id = ? THEN NULL ELSE member2_id END,
+          supervisor_id = CASE WHEN supervisor_id = ? THEN NULL ELSE supervisor_id END
+      WHERE id = ?
+      AND (? IN (member1_id, member2_id, supervisor_id))
+    `;
+
+    const params = [
+      req.session.userId, // CASE member1_id
+      req.session.userId, // CASE member2_id
+      req.session.userId, // CASE supervisor_id
+      thesisId,           // WHERE id
+      req.session.userId  // ensure professor is in comittee
+    ];
+    console.log('DEBUG: SQL Query:', removeProfessorSql);
+    console.log('DEBUG: Params:', params);
+    const result = await conn.execute(removeProfessorSql, params);
+    console.log('DEBUG result:', result);
+
+    await conn.commit();
+    conn.release();
+
+    if (result.affectedRows === 0) {
+      return { success: false, error: 'You are not part of this thesis comittee.' };
+    }
+
+    // Also reject the corresponding invitation
+    await rejectInvitation(req, invitationId);
+
+    return { success: true };
+
+  } catch (err) {
+    await conn.rollback();
+    conn.release();
+    console.error('Error in leaveComittee:', err);
+    throw err;
+  }
+}
+
 
 // Export the router to be used in the main app
 module.exports = router;
