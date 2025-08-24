@@ -6,9 +6,9 @@ Create a `.env` file in the root directory of the project and add your MariaDB d
 ```bash
 DB_HOST=localhost
 DB_USER=root
-DB_PASSWORD=secret123
-DB_NAME=mydatabase
-DB_CONNECTION_LIMIT= X
+DB_PASSWORD=your_root_password
+DB_NAME=diplomaDB
+DB_CONNECTION_LIMIT= 5
 ```
 
 ## 2. Install dependencies and seed the database
