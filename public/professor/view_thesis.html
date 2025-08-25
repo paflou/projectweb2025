@@ -1,25 +1,145 @@
 <!doctype html>
 <html lang="el">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link href="/stylesheets/style.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous" />
-    <title>Create new Thesis</title>
+    <title>Λίστα Διπλωματικών - Professor</title>
 </head>
 
 <body id="body" class="d-flex flex-column min-vh-100">
     <div id="navbar"></div>
 
-    <main class="flex-grow-1">
+    <main class="flex-grow-1 container">
+        <div class="row justify-content-center">
+            <div class="col-12">
+                <h2 class="display-4 text-center mt-4 mb-4">Λίστα Διπλωματικών Εργασιών</h2>
+
+                <!-- Filters -->
+                <div class="row mb-3">
+                    <div class="col-md-4 mb-2">
+                        <select class="form-select" id="statusFilter">
+                            <option value="">Κατάσταση Διπλωματικής (Όλες)</option>
+                            <option value="under-assignment">Υπό Ανάθεση</option>
+                            <option value="active">Ενεργή</option>
+                            <option value="completed">Περατωμένη</option>
+                            <option value="canceled">Ακυρωμένη</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <select class="form-select" id="roleFilter">
+                            <option value="">Ρόλος (Όλοι)</option>
+                            <option value="supervisor">Επιβλέπων</option>
+                            <option value="committee">Μέλος Τριμελούς</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-2 d-flex justify-content-end">
+                        <button class="btn btn-primary me-2" id="exportCSV">Εξαγωγή CSV</button>
+                        <button class="btn btn-secondary" id="exportJSON">Εξαγωγή JSON</button>
+                    </div>
+                </div>
+
+                <!-- Loading indicator -->
+                <div id="loadingIndicator" class="text-center my-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Φόρτωση...</span>
+                    </div>
+                    <p class="mt-2">Φόρτωση διπλωματικών...</p>
+                </div>
+
+                <!-- No thesis message -->
+                <div id="noThesisMessage" class="alert alert-info text-center d-none" role="alert">
+                    <h4 class="alert-heading">Δεν υπάρχουν διπλωματικές</h4>
+                    <p class="mb-0">Δεν υπάρχουν διπλωματικές για το επιλεγμένο φίλτρο.</p>
+                </div> 
+
+                <!-- Error message -->
+                <div id="errorMessage" class="alert alert-danger text-center d-none" role="alert">
+                    <h4 class="alert-heading">Σφάλμα</h4>
+                    <p id="errorText" class="mb-0">Παρουσιάστηκε σφάλμα κατά τη φόρτωση των διπλωματικών.</p>
+                </div>
+
+                <!-- Thesis container -->
+                <div id="thesisContainer" class="d-none">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card shadow-sm">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0">Διπλωματικές Εργασίες</h5>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th scope="col">Τίτλος</th>
+                                                    <th scope="col">Φοιτητής</th>
+                                                    <th scope="col">Επιβλέπων</th>
+                                                    <th scope="col">Ρόλος</th>
+                                                    <th scope="col">Κατάσταση</th>
+                                                    <th scope="col" class="text-center">Ενέργειες</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="thesisTableBody">
+                                                <!-- Thesis will be populated here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
     </main>
+
+    <!-- Thesis Details Modal -->
+    <div class="modal fade" id="thesisDetailsModal" tabindex="-1" aria-labelledby="thesisDetailsModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="thesisDetailsModalLabel">Λεπτομέρειες Διπλωματικής</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Τίτλος:</strong> <span id="detailTitle"></span></p>
+                    <p><strong>Φοιτητής:</strong> <span id="detailStudent"></span></p>
+                    <p><strong>Επιβλέπων:</strong> <span id="detailSupervisor"></span></p>
+                    <p><strong>Μέλη Τριμελούς:</strong> <span id="detailCommittee"></span></p>
+                    <p><strong>Κατάσταση:</strong> <span id="detailStatus"></span></p>
+                    <hr>
+                    <h6>Χρονολόγιο Ενεργειών</h6>
+                    <ul id="detailTimeline">
+                        <!-- Timeline entries will appear here -->
+                    </ul>
+                    <hr>
+                    <p><strong>Τελικός Βαθμός:</strong> <span id="detailFinalGrade"></span></p>
+                    <p><strong>Σύνδεσμοι Αρχείων:</strong> 
+                        <a href="#" id="detailRepositoryLink" target="_blank">Τελικό Κείμενο</a> | 
+                        <a href="#" id="detailEvaluationFormLink" target="_blank">Έντυπο Αξιολόγησης</a>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Κλείσιμο</button>
+                    <button type="button" class="btn btn-primary" id="actionBtn">Ενέργεια</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div id="footer"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous">
-        </script>
+    </script>
     <script src="/js/loadPartials.js"></script>
+    <script src="/js/viewRelevantThesis.js"></script>
 </body>
+
 </html>

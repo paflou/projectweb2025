@@ -130,16 +130,16 @@ function getStatusBadge(status) {
 function createActionButtons(invitation) {
     if (invitation.status === 'pending') {
         return `
-            <button class="btn btn-success btn-sm me-1" onclick="showAcceptModal(${invitation.id}, '${escapeHtml(invitation.thesis_title)}')">
+            <button class="btn btn-success btn-sm m-1" onclick="showAcceptModal(${invitation.id}, '${escapeHtml(invitation.thesis_title)}')">
                 <i class="bi bi-check-lg"></i> Αποδοχή
             </button>
-            <button class="btn btn-danger btn-sm" onclick="showRejectModal(${invitation.id}, '${escapeHtml(invitation.thesis_title)}')">
+            <button class="btn btn-danger btn-sm m-1" onclick="showRejectModal(${invitation.id}, '${escapeHtml(invitation.thesis_title)}')">
                 <i class="bi bi-x-lg"></i> Απόρριψη
             </button>
         `;
     } else if (invitation.status === 'accepted') {
         return `
-            <button class="btn btn-danger btn-sm" onclick="showLeaveModal(${invitation.id}, '${escapeHtml(invitation.thesis_title)}')">
+            <button class="btn btn-danger btn-sm m-1" onclick="showLeaveModal(${invitation.id}, '${escapeHtml(invitation.thesis_title)}')">
                 <i class="bi bi-x-lg"></i> Έξοδος
             </button>
         `;

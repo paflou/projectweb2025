@@ -11,27 +11,18 @@ async function seedDatabase() {
   const conn = await pool.getConnection();
   try {
     // Create create query
-    let sql = await fs.readFile(createFilePath, 'utf-8', (err, data) => {
-        if (err) {
-            console.error(err);
-            return;
-        }
-        console.log(data);
-    })
+    let sql = await fs.readFile(createFilePath, 'utf-8');
+    console.log(sql);
     // Execute the query
     let rows = await conn.query(sql);
-    
+    console.log(rows); // Logs the result of the create query
     // Create insert query
-    sql = await fs.readFile(insertFilePath, 'utf-8', (err, data) => {
-    if (err) {
-        console.error(err);
-        return;
-    }
-    console.log(data);
-    })
 
+    sql = await fs.readFile(insertFilePath, 'utf-8')
+    console.log(sql);
     // Execute the query
     rows = await conn.query(sql);
+    console.log(rows); // Logs the result of the insert query
     conn.release();
 
     // Return the first row if found, otherwise null
@@ -44,6 +35,12 @@ async function seedDatabase() {
     // Release the connection and propagate the error
     conn.release();
     throw err;
+  }
+  finally {
+    if (conn) conn.release(); // Ensure the connection is released
+    console.log("\nSuccessfully seeded the database. \n You can now run the server with 'npm start' or 'npm run dev'.");
+    process.exit(0);
+
   }
 }
 

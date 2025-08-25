@@ -58,7 +58,7 @@ CREATE TABLE
         description TEXT,
         submission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         pdf TEXT,
-        thesis_status ENUM ('under-assignment', 'active', 'under-review') NOT NULL DEFAULT 'under-assignment',
+        thesis_status ENUM ('under-assignment', 'active', 'under-review', 'completed', 'canceled') NOT NULL DEFAULT 'under-assignment',
         grade DECIMAL(4, 2) CHECK (
             grade >= 0
             AND grade <= 10

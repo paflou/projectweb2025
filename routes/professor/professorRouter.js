@@ -191,6 +191,82 @@ async function getUnderAssignment(req) {
   }
 }
 
+// Function to fetch relevant thesis' of current professor
+async function getRelevantThesis(req) {
+  // SQL query to select thesis where professor is supervisor or committee member
+  const sql = `
+  SELECT
+      t.id,
+      t.title,
+      t.description,
+      t.pdf,
+      t.thesis_status AS status,
+      CONCAT(s.name, ' ', s.surname) AS student_name,
+      CONCAT(p.name, ' ', p.surname) AS supervisor_name,
+      CONCAT(c1.name, ' ', c1.surname) AS member1_name,
+      CONCAT(c2.name, ' ', c2.surname) AS member2_name,
+      CASE
+          WHEN t.supervisor_id = ? THEN 'supervisor'
+          WHEN t.member1_id = ? OR member2_id = ? THEN 'committee'
+          WHEN t.student_id = ? THEN 'student'
+          ELSE 'unknown'
+      END AS user_role
+  FROM thesis AS t
+  LEFT JOIN user AS s ON t.student_id = s.id
+  LEFT JOIN user AS c1 ON t.member1_id = c1.id
+  LEFT JOIN user AS c2 ON t.member2_id = c2.id
+  LEFT JOIN user AS p ON t.supervisor_id = p.id
+  WHERE ? IN (supervisor_id, member1_id, member2_id, student_id);
+  `;
+
+  // Use the userId from the session as the query parameter
+  const params = [req.session.userId, req.session.userId, req.session.userId, req.session.userId, req.session.userId];
+  // Get a connection from the pool
+  const conn = await pool.getConnection();
+  try {
+    // Execute the query
+    const rows = await conn.query(sql, params);
+    conn.release();
+
+    // Return the first row if found, otherwise null
+    if (rows.length > 0) {
+      console.log(rows)
+      return rows;
+    } else {
+      return null;
+    }
+  } catch (err) {
+    // Release the connection and propagate the error
+    conn.release();
+    throw err;
+  }
+}
+// Route: GET /professor/get-relevant-thesis
+// Fetch and return the thesis the professor is supervising or is committee member of
+router.get('/get-relevant-thesis', async (req, res) => {
+  try {
+    // Retrieve student information from the database
+    const info = await getRelevantThesis(req);
+    if (info) {
+      // Set response header to JSON and send the info
+      // Convert BigInt values to strings if present
+      res.setHeader('Content-Type', 'application/json');
+      res.send(JSON.stringify({ info }, (_, v) =>
+        typeof v === 'bigint' ? v.toString() : v
+      ));
+    } else {
+      // If no info found, send 200 with empty array
+      res.status(200).json({ info: [] });
+    }
+  } catch (err) {
+    // Log and send server error if something goes wrong
+    console.error('Error in /get-info:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Function to delete a thesis by ID
+// Only the professor who created the thesis can delete it
 router.delete('/delete-topic', async (req, res) => {
   const sql = `
     DELETE FROM thesis
