@@ -7,13 +7,154 @@
     <link href="/stylesheets/style.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous" />
-    <title>Create new Thesis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet" />
+    <title>Προβολή Διπλωματικής Εργασίας</title>
 </head>
 
 <body id="body" class="d-flex flex-column min-vh-100">
     <div id="navbar"></div>
 
     <main class="flex-grow-1">
+        <div class="container mt-4">
+            <h2 class="display-5 text-center mb-4">Προβολή Διπλωματικής Εργασίας</h2>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Φόρτωση...</span>
+                </div>
+                <p class="mt-3 text-muted">Φόρτωση πληροφοριών διπλωματικής...</p>
+            </div>
+
+            <!-- No Thesis State -->
+            <div id="noThesisState" class="d-none">
+                <div class="alert alert-info text-center">
+                    <i class="bi bi-info-circle fs-1 mb-3"></i>
+                    <h4>Δεν έχετε ανατεθεί διπλωματική εργασία</h4>
+                    <p class="mb-0">Επικοινωνήστε με έναν καθηγητή για την ανάθεση θέματος διπλωματικής εργασίας.</p>
+                </div>
+            </div>
+
+            <!-- Thesis Details Card -->
+            <div id="thesisDetailsCard" class="card mb-4 d-none">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-text me-2"></i>
+                        Στοιχεία Θέματος Διπλωματικής
+                    </h5>
+                    <span id="thesisStatusBadge" class="badge"></span>
+                </div>
+                <div class="card-body">
+                    <!-- Thesis Title -->
+                    <div class="mb-4">
+                        <h4 id="thesisTitle" class="text-primary mb-3"></h4>
+                        <p id="thesisDescription" class="text-muted fs-6"></p>
+                    </div>
+
+                    <!-- Thesis Information Grid -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card bg-light h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title text-primary">
+                                        <i class="bi bi-person-badge me-2"></i>
+                                        Επιβλέπων Καθηγητής
+                                    </h6>
+                                    <p class="mb-1"><strong id="supervisorName"></strong></p>
+                                    <small class="text-muted">
+                                        <span id="supervisorTopic"></span><br>
+                                        <span id="supervisorDepartment"></span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title text-primary">
+                                        <i class="bi bi-calendar-event me-2"></i>
+                                        Χρονικά Στοιχεία
+                                    </h6>
+                                    <p class="mb-1">
+                                        <strong>Ημερομηνία Υποβολής:</strong><br>
+                                        <span id="submissionDate"></span>
+                                    </p>
+                                    <div id="assignmentInfo" class="d-none">
+                                        <p class="mb-1">
+                                            <strong>Επίσημη Ανάθεση:</strong><br>
+                                            <span id="assignmentDate"></span>
+                                        </p>
+                                        <p class="mb-0">
+                                            <strong>Χρόνος από την ανάθεση:</strong><br>
+                                            <span id="timeElapsed" class="text-success fw-bold"></span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Attached Description File -->
+                    <div id="attachedFileSection" class="mb-4 d-none">
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-paperclip me-2"></i>
+                                    Συνημμένο Αρχείο Περιγραφής
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-file-pdf text-danger fs-4 me-3"></i>
+                                        <span id="attachedFileName" class="fw-bold"></span>
+                                    </div>
+                                    <button class="btn btn-outline-primary" id="downloadFileBtn">
+                                        <i class="bi bi-download me-2"></i>
+                                        Λήψη Αρχείου
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Three-Member Committee Card -->
+            <div id="committeeCard" class="card mb-4 d-none">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people me-2"></i>
+                        Τριμελής Επιτροπή
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="committeeNotAssigned" class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Η τριμελής επιτροπή δεν έχει ακόμη οριστεί πλήρως.
+                    </div>
+
+                    <div id="committeeMembers" class="row">
+                        <!-- Committee members will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Status Information -->
+            <div id="statusInfoCard" class="card mb-4 d-none">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Τρέχουσα Κατάσταση
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="statusDescription">
+                        <!-- Status-specific information will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <div id="footer"></div>
@@ -21,9 +162,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous">
         </script>
-    <script src="/js/errorModal.js"></script>
-
+    <script src="/js/errorOrSuccessModal.js"></script>
     <script src="/js/loadPartials.js"></script>
+    <script src="/js/viewThesis.js"></script>
 </body>
 
 </html>
