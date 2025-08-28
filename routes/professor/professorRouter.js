@@ -516,13 +516,14 @@ router.post('/accept-invitation', async (req, res) => {
 // Reject a committee invitation
 router.post('/reject-invitation', async (req, res) => {
   try {
+    const conn = await pool.getConnection();
     const { invitationId } = req.body;
 
     if (!invitationId) {
       return res.status(400).json({ error: 'Invitation ID is required' });
     }
 
-    const result = await rejectInvitation(req, invitationId);
+    const result = await rejectInvitation(req, invitationId, conn);
 
     if (result.success) {
       res.status(200).json({ message: 'Invitation rejected successfully' });
@@ -829,6 +830,7 @@ async function getProfessorInvitations(req) {
   const conn = await pool.getConnection();
   try {
     const rows = await conn.query(sql, params);
+    console.log(rows);
     conn.release();
     return rows || [];
   } catch (err) {
@@ -954,10 +956,10 @@ async function acceptInvitation(req, invitationId) {
 }
 
 // Function to reject an invitation
-async function rejectInvitation(req, invitationId) {
-  const conn = await pool.getConnection();
-
+async function rejectInvitation(req, invitationId, conn) {
   try {
+    console.log('DEBUG: Starting rejectInvitation for invitationId:', invitationId, 'professorId:', req.session.userId);
+
     await conn.beginTransaction();
 
     // First, verify that the invitation belongs to the current professor and get thesis_id
@@ -966,9 +968,12 @@ async function rejectInvitation(req, invitationId) {
       FROM committee_invitation
       WHERE id = ? AND professor_id = ? AND status IN ('pending', 'accepted')
     `;
+    console.log('DEBUG: checkInvitationSql:', checkInvitationSql);
     const invitationRows = await conn.query(checkInvitationSql, [invitationId, req.session.userId]);
+    console.log('DEBUG: checkInvitationSql result:', invitationRows);
 
     if (invitationRows.length === 0) {
+      console.log('DEBUG: No invitation found or not available for rejection');
       await conn.rollback();
       conn.release();
       return { success: false, error: 'Invitation not found or not available for rejection' };
@@ -976,7 +981,7 @@ async function rejectInvitation(req, invitationId) {
 
     const thesisId = invitationRows[0].thesis_id;
     const currentStatus = invitationRows[0].status;
-
+    console.log('DEBUG: Found invitation for thesisId:', thesisId, 'currentStatus:', currentStatus);
 
     // Update the invitation status to rejected
     const updateSql = `
@@ -984,9 +989,12 @@ async function rejectInvitation(req, invitationId) {
       SET status = 'rejected'
       WHERE id = ? AND professor_id = ?
     `;
+    console.log('DEBUG: updateSql:', updateSql);
     const updateResult = await conn.query(updateSql, [invitationId, req.session.userId]);
+    console.log('DEBUG: updateResult:', updateResult);
 
     if (updateResult.affectedRows === 0) {
+      console.log('DEBUG: Failed to reject invitation');
       await conn.rollback();
       conn.release();
       return { success: false, error: 'Failed to reject invitation' };
@@ -994,12 +1002,13 @@ async function rejectInvitation(req, invitationId) {
 
     await conn.commit();
     conn.release();
+    console.log('DEBUG: Invitation rejected successfully');
     return { success: true };
 
   } catch (err) {
+    console.error('Error in rejectInvitation:', err);
     await conn.rollback();
     conn.release();
-    console.error('Error in rejectInvitation:', err);
     throw err;
   }
 }
@@ -1034,14 +1043,14 @@ async function leaveComittee(req, thesisId, invitationId) {
     console.log('DEBUG result:', result);
 
     await conn.commit();
-    conn.release();
 
     if (result.affectedRows === 0) {
       return { success: false, error: 'You are not part of this thesis comittee.' };
     }
 
     // Also reject the corresponding invitation
-    await rejectInvitation(req, invitationId);
+    await rejectInvitation(req, invitationId, conn);
+    conn.release();
 
     return { success: true };
 

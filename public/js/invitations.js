@@ -1,5 +1,6 @@
 // Global variables to store current invitation data
 let currentInvitationId = null;
+let currentThesisId = null;
 let currentThesisTitle = '';
 
 // DOM elements
@@ -35,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
 function setupEventListeners() {
     confirmAcceptBtn.addEventListener('click', handleAcceptInvitation);
     confirmRejectBtn.addEventListener('click', handleRejectInvitation);
-    confirmLeaveBtn.addEventListener('click', handleLeavecomittee);
+    confirmLeaveBtn.addEventListener('click', handleLeaveComittee);
 }
 
 // Load invitations from the server
@@ -139,7 +140,7 @@ function createActionButtons(invitation) {
         `;
     } else if (invitation.status === 'accepted') {
         return `
-            <button class="btn btn-danger btn-sm m-1" onclick="showLeaveModal(${invitation.id}, '${escapeHtml(invitation.thesis_title)}')">
+            <button class="btn btn-danger btn-sm m-1" onclick="showLeaveModal(${invitation.id}, ${invitation.thesis_id}, '${escapeHtml(invitation.thesis_title)}')">
                 <i class="bi bi-x-lg"></i> Έξοδος
             </button>
         `;
@@ -164,7 +165,8 @@ function showRejectModal(invitationId, thesisTitle) {
 }
 
 // Show leave confirmation modal
-function showLeaveModal(invitationId, thesisTitle) {
+function showLeaveModal(invitationId, thesisId, thesisTitle) {
+    currentThesisId = thesisId;
     currentInvitationId = invitationId;
     currentThesisTitle = thesisTitle;
     rejectThesisTitle.textContent = thesisTitle;
@@ -239,10 +241,8 @@ async function handleRejectInvitation() {
     }
 }
 
-// Handle reject invitation
-async function handleLeavecomittee() {
-    const thesisId = document.getElementById('thesisId').textContent;
-
+// Handle leave committee
+async function handleLeaveComittee() {
     try {
         const response = await fetch('/prof/leave-comittee', {
             method: 'POST',
@@ -250,7 +250,7 @@ async function handleLeavecomittee() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                thesisId: thesisId,
+                thesisId: currentThesisId,
                 invitationId: currentInvitationId
 
             })
@@ -262,8 +262,8 @@ async function handleLeavecomittee() {
 
         await response.json();
 
-        rejectModal.hide();
-        showToast('Επιτυχία', 'Η πρόσκληση απορρίφθηκε επιτυχώς!', 'success');
+        leaveModal.hide();
+        showToast('Επιτυχία', 'Η έξοδος από την επιτροπή ολοκληρώθηκε επιτυχώς!', 'success');
 
         // Reload invitations to reflect changes
         setTimeout(() => {
@@ -272,7 +272,7 @@ async function handleLeavecomittee() {
 
     } catch (error) {
         console.error('Error rejecting invitation:', error);
-        rejectModal.hide();
+        leaveModal.hide();
         showToast('Σφάλμα', 'Παρουσιάστηκε σφάλμα κατά την απόρριψη της πρόσκλησης.', 'error');
     }
 }
