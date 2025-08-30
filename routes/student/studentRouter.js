@@ -556,6 +556,10 @@ async function getThesisInfo(req) {
       t.description,
       t.thesis_status,
       t.submission_date,
+      t.exam_datetime,
+      t.exam_mode,
+      t.exam_location,
+      t.final_repository_link,
       t.pdf,
       t.draft,
       t.grade,
@@ -746,9 +750,22 @@ async function saveExamDetails(req, examDetails) {
       conn.release();
       return { success: false, error: 'No thesis found for student' };
     }
+    const sql = `
+      UPDATE thesis
+      SET exam_datetime = ?, exam_mode = ?, exam_location = ?
+      WHERE id = ?
+    `;
 
-    // This would require additional fields in thesis table or new table
-    // For now, return success
+    const examDatetime = `${examDetails.examDate} ${examDetails.examTime}:00`; // "YYYY-MM-DD HH:MM:SS"
+    console.log("Saving exam details with datetime:", examDatetime);
+    const params = [
+      examDatetime,
+      examDetails.examType,
+      examDetails.examLocation,
+      thesisInfo.id
+    ];
+    await conn.query(sql, params);
+
     conn.release();
     return { success: true };
 
@@ -769,8 +786,14 @@ async function saveRepositoryLink(req, repositoryLink) {
       return { success: false, error: 'No thesis found for student' };
     }
 
-    // This would require additional field in thesis table
-    // For now, return success
+    const sql = `
+      UPDATE thesis
+      SET final_repository_link = ?
+      WHERE id = ?
+    `;
+
+    const params = [repositoryLink, thesisInfo.id];
+    await conn.query(sql, params);
     conn.release();
     return { success: true };
 

@@ -65,8 +65,7 @@ CREATE TABLE IF NOT EXISTS thesis (
     -- Exam scheduling info
     exam_datetime DATETIME,
     exam_mode ENUM('in-person', 'online'),
-    exam_room VARCHAR(50),       -- for in-person
-    exam_link TEXT,              -- for online
+    exam_location TEXT,
     
     -- Final repository link (nemertes)
     final_repository_link TEXT,

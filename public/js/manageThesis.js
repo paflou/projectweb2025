@@ -42,6 +42,17 @@ const saveRepositoryBtn = document.getElementById('saveRepositoryBtn');
 const downloadThesisBtn = document.getElementById('downloadThesisBtn');
 const removeThesisBtn = document.getElementById('removeThesisBtn');
 const examLocationRow = document.getElementById('examLocationRow');
+const examLocationLabel = document.getElementById('examLocationLabel');
+const examLocationHelp = document.getElementById('examLocationHelp');
+const scheduledExamCard = document.getElementById('scheduledExamCard');
+const displayExamDate = document.getElementById('displayExamDate');
+const displayExamTime = document.getElementById('displayExamTime');
+const displayExamType = document.getElementById('displayExamType');
+const displayExamLocation = document.getElementById('displayExamLocation');
+const examDetailsCard = document.getElementById('examDetailsCard');
+const displayRepositoryLink = document.getElementById('displayRepositoryLink');
+const savedRepositoryCard = document.getElementById('savedRepositoryCard');
+const savedRepositoryLink = document.getElementById('savedRepositoryLink');
 
 // Modal elements
 const inviteProfessorModal = document.getElementById('inviteProfessorModal');
@@ -109,6 +120,7 @@ function initializeEventListeners() {
     // Save repository link
     if (saveRepositoryBtn) {
         saveRepositoryBtn.addEventListener('click', handleSaveRepository);
+
     }
 
     // Exam type change
@@ -174,6 +186,10 @@ async function loadThesisInfo() {
             else if (data.thesis.thesis_status === 'under-review' || data.thesis.thesis_status === 'active') {
                 getCurrentFile();
                 loadMaterialLinks();
+                if (data.thesis.exam_datetime !== null) {
+                    console.log(data.thesis)
+                    populateExamDetails(data.thesis.exam_datetime, data.thesis.exam_mode, data.thesis.exam_location);
+                }
             }
         }
 
@@ -640,8 +656,36 @@ async function handleSaveExamDetails() {
     const examTypeValue = examType.value;
     const examLocationValue = examLocation.value.trim();
 
+    console.log({ examDateValue, examTimeValue, examTypeValue, examLocationValue });
+
     if (!examDateValue || !examTimeValue || !examTypeValue || !examLocationValue) {
         showError('Παρακαλώ συμπληρώστε όλα τα στοιχεία εξέτασης');
+        return;
+    }
+
+    if (examTypeValue === 'in-person' && examLocationValue.length < 5) {
+        showError('Παρακαλώ εισάγετε έγκυρη αίθουσα και κτίριο για τη δια ζώσης εξέταση');
+        return;
+    }
+    else if (examTypeValue === 'online') {
+        try {
+            new URL(examLocationValue);
+        } catch {
+            showError('Μη έγκυρος σύνδεσμος για τη διαδικτυακή εξέταση');
+            return;
+        }
+    }
+
+    let nextYear = new Date();
+    nextYear.setFullYear(nextYear.getFullYear() + 1);
+    let formatted = nextYear.toISOString().split('T')[0];
+
+    if (examDateValue < new Date().toISOString().split('T')[0]) {
+        showError('Η ημερομηνία εξέτασης δεν μπορεί να είναι στο παρελθόν');
+        return;
+    }
+    else if (examDateValue > formatted) {
+        showError('Η ημερομηνία εξέτασης δεν μπορεί να είναι πέρα από ένα έτος από σήμερα');
         return;
     }
 
@@ -668,7 +712,12 @@ async function handleSaveExamDetails() {
         }
 
         showSuccess('Τα στοιχεία εξέτασης αποθηκεύτηκαν επιτυχώς!');
-
+        populateExamDetails({
+            datetime: examDateValue,
+            type: examTypeValue,
+            location: examLocationValue
+        });
+        
     } catch (error) {
         console.error('Error saving exam details:', error);
         showError(`Σφάλμα κατά την αποθήκευση: ${error.message}`);
@@ -677,6 +726,7 @@ async function handleSaveExamDetails() {
         saveExamDetailsBtn.innerHTML = '<i class="bi bi-save"></i> Αποθήκευση Στοιχείων Εξέτασης';
     }
 }
+
 
 // Handle save repository link
 async function handleSaveRepository() {
@@ -687,9 +737,15 @@ async function handleSaveRepository() {
         return;
     }
 
-    // Basic URL validation
+    // URL validation
     try {
-        new URL(repositoryLinkValue);
+        const url = new URL(repositoryLinkValue);
+
+        if (url.hostname !== 'nemertes.library.upatras.gr/') {
+            showError('Ο σύνδεσμος αποθετηρίου πρέπει να είναι από το nemertes.library.upatras.gr');
+            return;
+        }
+
     } catch {
         showError('Μη έγκυρος σύνδεσμος');
         return;
@@ -727,18 +783,20 @@ async function handleSaveRepository() {
 
 // Handle exam type change
 function handleExamTypeChange() {
-    const examLocationLabel = document.getElementById('examLocationLabel');
-    const examLocationHelp = document.getElementById('examLocationHelp');
-
     if (examType.value === 'in-person') {
+        examLocationRow.classList.remove('d-none');
+
         examLocationLabel.textContent = 'Αίθουσα Εξέτασης';
         examLocation.placeholder = 'π.χ. Αίθουσα Α1, Κτίριο Μηχανικών';
         examLocationHelp.textContent = 'Εισάγετε την αίθουσα και το κτίριο όπου θα γίνει η εξέταση.';
     } else if (examType.value === 'online') {
+        examLocationRow.classList.remove('d-none');
         examLocationLabel.textContent = 'Σύνδεσμος Τηλεδιάσκεψης';
         examLocation.placeholder = 'π.χ. https://zoom.us/j/123456789';
         examLocationHelp.textContent = 'Εισάγετε τον σύνδεσμο για τη διαδικτυακή εξέταση.';
     } else {
+        examLocationRow.classList.add('d-none');
+
         examLocationLabel.textContent = 'Τοποθεσία/Σύνδεσμος';
         examLocation.placeholder = 'Αίθουσα εξέτασης ή σύνδεσμος τηλεδιάσκεψης';
         examLocationHelp.textContent = 'Για δια ζώσης εξέταση: Αίθουσα και κτίριο. Για διαδικτυακή: Σύνδεσμος τηλεδιάσκεψης.';
@@ -806,6 +864,19 @@ async function getCurrentFile() {
     }
 }
 
+function populateExamDetails(dateTime, type, location) {
+    if (!dateTime) return;
+
+    examDetailsCard.classList.add('d-none');
+    console.log('Populating exam details:', dateTime, type, location);
+
+    const examDateObj = new Date(dateTime);
+    displayExamDate.textContent = examDateObj.toLocaleDateString('el-GR');
+    displayExamTime.textContent = examDateObj.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' });
+    displayExamType.textContent = type === 'in-person' ? 'Δια Ζώσης' : 'Διαδικτυακή';
+    displayExamLocation.textContent = location;
+    scheduledExamCard.classList.remove('d-none');
+}
 
 function escapeHtml(text) {
     if (!text) return '';
