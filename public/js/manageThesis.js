@@ -53,6 +53,9 @@ const examDetailsCard = document.getElementById('examDetailsCard');
 const displayRepositoryLink = document.getElementById('displayRepositoryLink');
 const savedRepositoryCard = document.getElementById('savedRepositoryCard');
 const savedRepositoryLink = document.getElementById('savedRepositoryLink');
+const editExamDetailsBtn = document.getElementById('editExamDetailsBtn');
+const repositoryCard = document.getElementById('repositoryCard');
+const editRepositoryBtn = document.getElementById('editRepositoryBtn');
 
 // Modal elements
 const inviteProfessorModal = document.getElementById('inviteProfessorModal');
@@ -68,6 +71,7 @@ let selectedProfessor = null;
 document.addEventListener('DOMContentLoaded', function () {
     initializeEventListeners();
     loadThesisInfo();
+    getRepositoryLink();
 });
 
 function initializeEventListeners() {
@@ -131,6 +135,37 @@ function initializeEventListeners() {
     // Confirm invitation
     if (confirmInviteBtn) {
         confirmInviteBtn.addEventListener('click', handleConfirmInvite);
+    }
+
+    if (editExamDetailsBtn) {
+        editExamDetailsBtn.addEventListener('click', () => {
+            // populate form with existing details
+            if (currentThesis && currentThesis.exam_datetime) {
+                const examDateTime = new Date(currentThesis.exam_datetime);
+                examDate.value = examDateTime.toISOString().split('T')[0];
+                examTime.value = examDateTime.toTimeString().split(' ')[0].slice(0, 5); // HH:MM
+                examType.value = currentThesis.exam_mode;
+                examLocation.value = currentThesis.exam_location;
+                handleExamTypeChange();
+            }
+            // Show exam details form
+            examDetailsCard.classList.remove('d-none');
+            // Hide scheduled exam card
+            scheduledExamCard.classList.add('d-none');
+        });
+    }
+
+    if (editRepositoryBtn) {
+        editRepositoryBtn.addEventListener('click', () => {
+            // Populate input with existing link
+            if (savedRepositoryLink && savedRepositoryLink.textContent) {
+                repositoryLink.value = savedRepositoryLink.textContent;
+            }
+            // Show repository input
+            repositoryCard.classList.remove('d-none');
+            // Hide saved repository card
+            savedRepositoryCard.classList.add('d-none');
+        });
     }
 }
 
@@ -712,12 +747,8 @@ async function handleSaveExamDetails() {
         }
 
         showSuccess('Τα στοιχεία εξέτασης αποθηκεύτηκαν επιτυχώς!');
-        populateExamDetails({
-            datetime: examDateValue,
-            type: examTypeValue,
-            location: examLocationValue
-        });
-        
+        populateExamDetails(`${examDateValue}T${examTimeValue}`, examTypeValue, examLocationValue);
+
     } catch (error) {
         console.error('Error saving exam details:', error);
         showError(`Σφάλμα κατά την αποθήκευση: ${error.message}`);
@@ -741,7 +772,7 @@ async function handleSaveRepository() {
     try {
         const url = new URL(repositoryLinkValue);
 
-        if (url.hostname !== 'nemertes.library.upatras.gr/') {
+        if (url.hostname !== 'nemertes.library.upatras.gr') {
             showError('Ο σύνδεσμος αποθετηρίου πρέπει να είναι από το nemertes.library.upatras.gr');
             return;
         }
@@ -771,7 +802,7 @@ async function handleSaveRepository() {
         }
 
         showSuccess('Ο σύνδεσμος αποθετηρίου αποθηκεύτηκε επιτυχώς!');
-
+        getRepositoryLink();
     } catch (error) {
         console.error('Error saving repository link:', error);
         showError(`Σφάλμα κατά την αποθήκευση: ${error.message}`);
@@ -931,6 +962,32 @@ async function cancelRemainingInvitations() {
         }
     } catch (error) {
         console.error('Error cancelling pending invitations:', error);
+    }
+}
+
+async function getRepositoryLink() {
+    try {
+        const response = await fetch('/student/repository-link', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.repositoryLink) {
+            repositoryLink.value = data.repositoryLink;
+            displayRepositoryLink.href = data.repositoryLink;
+            displayRepositoryLink.textContent = data.repositoryLink;
+
+            // Show saved repository card, hide input
+            savedRepositoryCard.classList.remove('d-none');
+            repositoryCard.classList.add('d-none');
+        }
+    } catch (error) {
+        console.error('Error fetching repository link:', error);
     }
 }
 

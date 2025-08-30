@@ -823,5 +823,18 @@ async function cancelPendingInvitations(thesisId) {
   }
 }
 
+router.get('/repository-link', checkPermission('student'), async (req, res) => {
+  try {
+    const thesisInfo = await getThesisInfo(req);
+    if (thesisInfo && thesisInfo.final_repository_link) {
+      res.status(200).json({ repositoryLink: thesisInfo.final_repository_link });
+    } else {
+      res.status(404).json({ error: 'No repository link found' });
+    }
+  } catch (err) {
+    console.error('Error in /repository-link:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
 
 module.exports = router;
