@@ -41,6 +41,7 @@ const saveRepositoryBtn = document.getElementById('saveRepositoryBtn');
 // Active elements
 const downloadThesisBtn = document.getElementById('downloadThesisBtn');
 const removeThesisBtn = document.getElementById('removeThesisBtn');
+const examLocationRow = document.getElementById('examLocationRow');
 
 // Modal elements
 const inviteProfessorModal = document.getElementById('inviteProfessorModal');
@@ -56,8 +57,6 @@ let selectedProfessor = null;
 document.addEventListener('DOMContentLoaded', function () {
     initializeEventListeners();
     loadThesisInfo();
-    getCurrentFile();
-
 });
 
 function initializeEventListeners() {
@@ -66,7 +65,7 @@ function initializeEventListeners() {
         searchProfessorBtn.addEventListener('click', handleProfessorSearch);
     }
 
-    if(downloadThesisBtn) {
+    if (downloadThesisBtn) {
         downloadThesisBtn.addEventListener('click', () => {
             if (currentThesis && currentThesis.draft) {
                 window.location.href = `/student/download-thesis/${currentThesis.draft}`;
@@ -76,7 +75,7 @@ function initializeEventListeners() {
         });
     }
 
-    if(removeThesisBtn) {
+    if (removeThesisBtn) {
         removeThesisBtn.addEventListener('click', () => {
             if (confirm('Είστε σίγουροι ότι θέλετε να αφαιρέσετε το τρέχον αρχείο διπλωματικής;')) {
                 removeCurrentDraft();
@@ -171,6 +170,10 @@ async function loadThesisInfo() {
             if (data.thesis.thesis_status === 'under-assignment') {
                 loadCommitteeStatus();
                 startStatusPolling(); // Start polling for status changes
+            }
+            else if (data.thesis.thesis_status === 'under-review' || data.thesis.thesis_status === 'active') {
+                getCurrentFile();
+                loadMaterialLinks();
             }
         }
 
@@ -539,8 +542,8 @@ async function handleAddLink() {
         linkTitle.value = '';
         linkUrl.value = '';
 
-        // Refresh links display (placeholder)
-        // loadMaterialLinks();
+        // Refresh links display
+        loadMaterialLinks();
 
     } catch (error) {
         console.error('Error adding link:', error);
@@ -550,6 +553,85 @@ async function handleAddLink() {
         addLinkBtn.innerHTML = '<i class="bi bi-plus"></i> Προσθήκη';
     }
 }
+
+async function loadMaterialLinks() {
+    try {
+        const response = await fetch('/student/material-links', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        // console.log('Material Links:', data.links); // Debug log
+
+        displayMaterialLinks(data.links);
+    } catch (error) {
+        console.error('Error loading material links:', error);
+        showError('Σφάλμα κατά τη φόρτωση των συνδέσμων υλικού');
+    }
+}
+
+function displayMaterialLinks(links) {
+    existingLinks.innerHTML = '';
+    if (!links || links.length === 0) {
+        existingLinks.innerHTML = '<div class="text-muted small">Δεν υπάρχουν προστιθέμενοι σύνδεσμοι</div>';
+        return;
+    }
+
+    links.forEach(link => {
+        const linkItem = document.createElement('div');
+        linkItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+        linkItem.innerHTML = `
+            <div class="d-flex align-items-center">
+                <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="m-2">
+                <span class="me-2 text-truncate">
+                    ${escapeHtml(link.url)}
+                </span>
+                </a>
+            </div>
+            <button class="btn btn-sm btn-outline-danger delete-link-btn" data-id="${link.id}">
+                <i class="bi bi-trash"></i>
+            </button>
+        `;
+
+        existingLinks.appendChild(linkItem);
+    });
+
+    // delete button listeners
+    document.querySelectorAll('.delete-link-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const id = this.getAttribute('data-id');
+            //console.log('Delete link with id:', id);
+
+            if (confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον σύνδεσμο;')) {
+                // Call delete API
+                fetch(`/student/material-links/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        showSuccess('Ο σύνδεσμος διαγράφηκε επιτυχώς!');
+                        loadMaterialLinks(); // Refresh links
+                    })
+                    .catch(error => {
+                        console.error('Error deleting link:', error);
+                        showError('Σφάλμα κατά τη διαγραφή του συνδέσμου');
+                    });
+            }
+        });
+    });
+}
+
 
 // Handle save exam details
 async function handleSaveExamDetails() {
@@ -709,7 +791,7 @@ async function getCurrentFile() {
         const response = await fetch('/student/current-thesis-file', {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json' 
+                'Content-Type': 'application/json'
             }
         });
         if (!response.ok) {

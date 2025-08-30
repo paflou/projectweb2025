@@ -326,7 +326,7 @@ router.post('/add-material-link', checkPermission('student'), async (req, res) =
     const result = await addMaterialLink(req, title, url);
 
     if (result.success) {
-      res.status(200).json({ message: 'Link added successfully', linkId: result.linkId });
+      res.status(200).json({ message: 'Link added successfully', linkId: result.linkId.toString() });
     } else {
       res.status(400).json({ error: result.error });
     }
@@ -400,6 +400,70 @@ router.post('/cancel-pending-invitations', checkPermission('student'), async (re
     }
   } catch (err) {
     console.error('Error in /cancel-pending-invitations:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+router.get('/material-links', checkPermission('student'), async (req, res) => {
+  try {
+    const thesisInfo = await getThesisInfo(req);
+    if (!thesisInfo) {
+      return res.status(400).json({ error: 'No thesis found for student' });
+    }
+    const sql = `
+      SELECT id, url
+      FROM additional_thesis_material
+      WHERE thesis_id = ?
+    `;
+    const params = [thesisInfo.id];
+    const conn = await pool.getConnection();
+    try {
+      const rows = await conn.query(sql, params);
+      conn.release();
+      res.status(200).json({ links: rows.map(row => ({ id: row.id.toString(), url: row.url })) });
+    } catch (err) {
+      conn.release();
+      throw err;
+    }
+  } catch (err) {
+    console.error('Error in /material-links:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+router.delete('/material-links/:id', checkPermission('student'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ error: 'Link ID is required' });
+    }
+    const thesisInfo = await getThesisInfo(req);
+    if (!thesisInfo) {
+      return res.status(400).json({ error: 'No thesis found for student' });
+    }
+    const sql = `
+      DELETE FROM additional_thesis_material
+      WHERE id = ? AND thesis_id = ?
+    `;
+    const params = [id, thesisInfo.id];
+
+    console.log("Deleting link with params:", params);
+
+    const conn = await pool.getConnection();
+    try {
+      const result = await conn.query(sql, params);
+      conn.release();
+      if (result.affectedRows > 0) {
+        res.status(200).json({ message: 'Link deleted successfully' });
+      } else {
+        res.status(404).json({ error: 'Link not found or does not belong to your thesis' });
+      }
+    } catch (err) {
+      conn.release();
+      throw err;
+    }
+  } catch (err) {
+    console.error('Error in DELETE /material-links:', err);
     res.status(500).json({ error: 'Server Error' });
   }
 });
@@ -655,36 +719,13 @@ async function addMaterialLink(req, title, url) {
     if (!thesisInfo) {
       conn.release();
       return { success: false, error: 'No thesis found for student' };
-      return { success: true, linkId: 1 };
     }
 
-    // Function to save examination details
-    async function saveExamDetails(req, examDetails) {
-      const conn = await pool.getConnection();
-
-      try {
-        const thesisInfo = await getThesisInfo(req);
-        if (!thesisInfo) {
-          conn.release();
-          return { success: false, error: 'No thesis found for student' };
-        }
-
-        // This would require additional fields in thesis table or new table
-        // For now, return success
-        conn.release();
-        return { success: true };
-
-      } catch (err) {
-        conn.release();
-        throw err;
-      }
-    }
-    // Insert link into additional_thesis_material table
-    const insertSql = `
+    const sql = `
       INSERT INTO additional_thesis_material (thesis_id, url)
       VALUES (?, ?)
     `;
-    const result = await conn.query(insertSql, [thesisInfo.id, url]);
+    const result = await conn.query(sql, [thesisInfo.id, url]);
     const linkId = result.insertId;
     conn.release();
     return { success: true, linkId };
@@ -694,47 +735,70 @@ async function addMaterialLink(req, title, url) {
   }
 }
 
-    // Function to save repository link
-    async function saveRepositoryLink(req, repositoryLink) {
-      const conn = await pool.getConnection();
 
-      try {
-        const thesisInfo = await getThesisInfo(req);
-        if (!thesisInfo) {
-          conn.release();
-          return { success: false, error: 'No thesis found for student' };
-        }
+// Function to save examination details
+async function saveExamDetails(req, examDetails) {
+  const conn = await pool.getConnection();
 
-        // This would require additional field in thesis table
-        // For now, return success
-        conn.release();
-        return { success: true };
-
-      } catch (err) {
-        conn.release();
-        throw err;
-      }
+  try {
+    const thesisInfo = await getThesisInfo(req);
+    if (!thesisInfo) {
+      conn.release();
+      return { success: false, error: 'No thesis found for student' };
     }
 
-    // Function to cancel pending invitations when thesis becomes active
-    async function cancelPendingInvitations(thesisId) {
-      const conn = await pool.getConnection();
+    // This would require additional fields in thesis table or new table
+    // For now, return success
+    conn.release();
+    return { success: true };
 
-      try {
-        const cancelSql = `
+  } catch (err) {
+    conn.release();
+    throw err;
+  }
+}
+
+// Function to save repository link
+async function saveRepositoryLink(req, repositoryLink) {
+  const conn = await pool.getConnection();
+
+  try {
+    const thesisInfo = await getThesisInfo(req);
+    if (!thesisInfo) {
+      conn.release();
+      return { success: false, error: 'No thesis found for student' };
+    }
+
+    // This would require additional field in thesis table
+    // For now, return success
+    conn.release();
+    return { success: true };
+
+  } catch (err) {
+    conn.release();
+    throw err;
+  }
+}
+
+// Function to cancel pending invitations when thesis becomes active
+async function cancelPendingInvitations(thesisId) {
+  const conn = await pool.getConnection();
+
+  try {
+    const cancelSql = `
       UPDATE committee_invitation
       SET status = 'cancelled'
       WHERE thesis_id = ? AND status = 'pending'
     `;
-        await conn.query(cancelSql, [thesisId]);
-        conn.release();
-        return { success: true };
+    await conn.query(cancelSql, [thesisId]);
+    conn.release();
+    return { success: true };
 
-      } catch (err) {
-        conn.release();
-        throw err;
-      }
-    }
+  } catch (err) {
+    conn.release();
+    throw err;
+  }
+}
 
 
-    module.exports = router;
+module.exports = router;
