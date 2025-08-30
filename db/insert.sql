@@ -316,21 +316,22 @@ INSERT INTO professor (id, topic, department, university) VALUES
 (149, 'Basketball Strategy', 'SEF', 'University of Gate 7');
 
 INSERT INTO thesis (id, title, description, student_id, supervisor_id, member1_id, member2_id, thesis_status) VALUES
-(1, 'Edge Computing for IoT', 'Optimizing IoT devices with edge computing.', 10000, 101, 102, 103, 'under-assignment'),
-(2, 'Smart Agriculture Sensors', 'IoT-based monitoring for precision farming.', 10001, 102, 101, 146, 'active'),
-(3, 'AI in Cybersecurity', 'AI-driven threat detection and prevention systems.', 10002, 103, 101, 146, 'under-review'),
-(4, 'Machine Learning in Healthcare', 'Improving diagnostics with ML algorithms.', 10003, 146, 101, 102, 'completed'),
-(5, 'Blockchain in Supply Chain', 'Enhancing transparency using blockchain.', 10004, 101, 103, 146, 'canceled'),
-(6, 'Renewable Energy Optimization', 'Smart grid solutions for renewables.', 10005, 102, 103, 146, 'active'),
-(7, 'Autonomous Vehicle Navigation', 'Developing navigation systems for AVs.', 10006, 103, 101, 102, 'under-review'),
-(8, 'Cloud Security Challenges', 'Addressing vulnerabilities in cloud systems.', 10007, 146, 101, 103, 'completed'),
-(9, 'Virtual Reality in Education', 'Using VR for immersive learning.', 10008, 101, 102, 146, 'under-assignment'),
-(10, 'Smart Grid Technologies', 'Modernizing electrical grids with IoT.', 10009, 102, 101, 103, 'active'),
-(11, 'Deep Learning for Image Recognition', 'Advanced image recognition models.', 10010, 103, 101, 146, 'under-review'),
-(12, '5G Network Optimization', 'Enhancing performance of 5G networks.', 10011, 146, 101, 102, 'completed'),
-(13, 'Natural Language Processing', 'Improving language models for applications.', 10012, 101, 103, 146, 'canceled'),
-(14, 'IoT Device Security', 'Securing IoT devices against cyberattacks.', 10013, 102, 101, 103, 'active'),
-(15, 'Computer Vision in Robotics', 'Applying CV for robotic automation.', 10014, 103, 101, 146, 'under-review');
+(1, 'Edge Computing for IoT', 'Optimizing IoT devices with edge computing.', 10000, 101, 103, NULL, 'under-assignment'),
+(2, 'Smart Agriculture Sensors', 'IoT-based monitoring for precision farming.', 10001, 102, 101, NULL, 'active'),
+(3, 'AI in Cybersecurity', 'AI-driven threat detection and prevention systems.', 10002, 103, 101, NULL, 'under-review'),
+(4, 'Machine Learning in Healthcare', 'Improving diagnostics with ML algorithms.', 10003, 146, 102, NULL, 'completed'),
+(5, 'Blockchain in Supply Chain', 'Enhancing transparency using blockchain.', 10004, 101, 103, NULL, 'canceled'),
+(6, 'Renewable Energy Optimization', 'Smart grid solutions for renewables.', 10005, 102, 146, NULL, 'active'),
+(7, 'Autonomous Vehicle Navigation', 'Developing navigation systems for AVs.', 10006, 103, 102, NULL, 'under-review'),
+(8, 'Cloud Security Challenges', 'Addressing vulnerabilities in cloud systems.', 10007, 146, 101, NULL, 'completed'),
+(9, 'Virtual Reality in Education', 'Using VR for immersive learning.', 10008, 101, 146, NULL, 'under-assignment'),
+(10, 'Smart Grid Technologies', 'Modernizing electrical grids with IoT.', 10009, 102, 101, NULL, 'active'),
+(11, 'Deep Learning for Image Recognition', 'Advanced image recognition models.', 10010, 103, 146, NULL, 'under-review'),
+(12, '5G Network Optimization', 'Enhancing performance of 5G networks.', 10011, 146, 101, NULL, 'completed'),
+(13, 'Natural Language Processing', 'Improving language models for applications.', 10012, 101, 103, NULL, 'canceled'),
+(14, 'IoT Device Security', 'Securing IoT devices against cyberattacks.', 10013, 102, 103, NULL, 'active'),
+(15, 'Computer Vision in Robotics', 'Applying CV for robotic automation.', 10014, 103, 101, NULL, 'under-review');
+
 
 
 INSERT INTO committee_invitation (thesis_id, professor_id, status) VALUES

@@ -34,13 +34,13 @@ async function seedDatabase() {
   } catch (err) {
     // Release the connection and propagate the error
     conn.release();
-    throw err;
+    console.error("Error seeding the database:", err);
+    process.exit(1); // exit with failure code
   }
   finally {
     if (conn) conn.release(); // Ensure the connection is released
     console.log("\nSuccessfully seeded the database. \n You can now run the server with 'npm start' or 'npm run dev'.");
     process.exit(0);
-
   }
 }
 

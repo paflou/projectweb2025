@@ -38,6 +38,10 @@ const saveExamDetailsBtn = document.getElementById('saveExamDetailsBtn');
 const repositoryLink = document.getElementById('repositoryLink');
 const saveRepositoryBtn = document.getElementById('saveRepositoryBtn');
 
+// Active elements
+const downloadThesisBtn = document.getElementById('downloadThesisBtn');
+const removeThesisBtn = document.getElementById('removeThesisBtn');
+
 // Modal elements
 const inviteProfessorModal = document.getElementById('inviteProfessorModal');
 const professorInviteDetails = document.getElementById('professorInviteDetails');
@@ -49,9 +53,11 @@ let currentThesis = null;
 let selectedProfessor = null;
 
 // Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     initializeEventListeners();
     loadThesisInfo();
+    getCurrentFile();
+
 });
 
 function initializeEventListeners() {
@@ -59,9 +65,27 @@ function initializeEventListeners() {
     if (searchProfessorBtn) {
         searchProfessorBtn.addEventListener('click', handleProfessorSearch);
     }
-    
+
+    if(downloadThesisBtn) {
+        downloadThesisBtn.addEventListener('click', () => {
+            if (currentThesis && currentThesis.draft) {
+                window.location.href = `/student/download-thesis/${currentThesis.draft}`;
+            } else {
+                showError('Δεν υπάρχει διαθέσιμη διπλωματική για λήψη');
+            }
+        });
+    }
+
+    if(removeThesisBtn) {
+        removeThesisBtn.addEventListener('click', () => {
+            if (confirm('Είστε σίγουροι ότι θέλετε να αφαιρέσετε το τρέχον αρχείο διπλωματικής;')) {
+                removeCurrentDraft();
+            }
+        });
+    }
+
     if (professorSearch) {
-        professorSearch.addEventListener('keypress', function(e) {
+        professorSearch.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 handleProfessorSearch();
             }
@@ -99,6 +123,25 @@ function initializeEventListeners() {
     }
 }
 
+async function removeCurrentDraft() {
+    try {
+        const response = await fetch('/student/remove-current-draft', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        showSuccess('Το τρέχον αρχείο διπλωματικής αφαιρέθηκε επιτυχώς!');
+        currentThesisFile.classList.add('d-none');
+    } catch (error) {
+        console.error('Error removing current thesis file:', error);
+        showError('Σφάλμα κατά την αφαίρεση του αρχείου διπλωματικής');
+    }
+}
+
 // Load thesis information
 async function loadThesisInfo() {
     try {
@@ -114,16 +157,16 @@ async function loadThesisInfo() {
         }
 
         const data = await response.json();
-        
+
         hideLoadingState();
-        
+
         if (!data.thesis) {
             showNoThesisState();
         } else {
             currentThesis = data.thesis;
             displayThesisInfo(data.thesis);
             showStatusSection(data.thesis.thesis_status);
-            
+
             // Load additional data based on status
             if (data.thesis.thesis_status === 'under-assignment') {
                 loadCommitteeStatus();
@@ -144,13 +187,13 @@ function displayThesisInfo(thesis) {
     thesisDescription.textContent = thesis.description || 'Δεν υπάρχει περιγραφή';
     supervisorName.textContent = `${thesis.supervisor_name} ${thesis.supervisor_surname}`;
     assignmentDate.textContent = new Date(thesis.submission_date).toLocaleDateString('el-GR');
-    
+
     // Set status badge
     const statusText = getStatusText(thesis.thesis_status);
     const statusClass = getStatusClass(thesis.thesis_status);
     thesisStatusBadge.textContent = statusText;
     thesisStatusBadge.className = `badge ${statusClass}`;
-    
+
     thesisInfoCard.classList.remove('d-none');
 }
 
@@ -160,7 +203,7 @@ function showStatusSection(status) {
     underAssignmentSection.classList.add('d-none');
     underExaminationSection.classList.add('d-none');
     completedSection.classList.add('d-none');
-    
+
     // Show appropriate section
     switch (status) {
         case 'under-assignment':
@@ -232,47 +275,47 @@ function displayCommitteeStatus(status) {
 function createCommitteeMemberItem(member, type) {
     const item = document.createElement('div');
     item.className = 'list-group-item';
-    
-    const statusIcon = type === 'accepted' ? 
-        '<i class="bi bi-check-circle text-success me-2"></i>' : 
+
+    const statusIcon = type === 'accepted' ?
+        '<i class="bi bi-check-circle text-success me-2"></i>' :
         '<i class="bi bi-clock text-warning me-2"></i>';
-    
+
     item.innerHTML = `
         ${statusIcon}
         <strong>${escapeHtml(member.name)} ${escapeHtml(member.surname)}</strong><br>
         <small class="text-muted">${escapeHtml(member.topic)} - ${escapeHtml(member.department)}</small>
     `;
-    
+
     return item;
 }
 
 // Handle professor search
 async function handleProfessorSearch() {
     const query = professorSearch.value.trim();
-    
+
     if (query.length < 2) {
         showError('Παρακαλώ εισάγετε τουλάχιστον 2 χαρακτήρες για αναζήτηση');
         return;
     }
-    
+
     try {
         searchProfessorBtn.disabled = true;
         searchProfessorBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Αναζήτηση...';
-        
+
         const response = await fetch(`/student/search-professors?query=${encodeURIComponent(query)}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
         displayProfessorSearchResults(data.professors);
-        
+
     } catch (error) {
         console.error('Error searching professors:', error);
         showError('Σφάλμα κατά την αναζήτηση καθηγητών');
@@ -404,9 +447,13 @@ async function handleThesisUpload() {
     }
 
     // Validate file type
-    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const allowedTypes = [
+        'application/pdf',                                                          // PDF files
+        'application/vnd.oasis.opendocument.text',                                  // ODT (OpenDocument Text)
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'   // DOCX (modern Word)
+    ];
     if (!allowedTypes.includes(file.type)) {
-        showError('Μη υποστηριζόμενος τύπος αρχείου. Επιτρέπονται μόνο PDF, DOC, DOCX');
+        showError('Μη υποστηριζόμενος τύπος αρχείου. Επιτρέπονται μόνο PDF, ODF, DOCX');
         return;
     }
 
@@ -422,7 +469,7 @@ async function handleThesisUpload() {
 
         const formData = new FormData();
         formData.append('thesis', file);
-
+        console.log(formData)
         const response = await fetch('/student/upload-thesis', {
             method: 'POST',
             body: formData
@@ -451,7 +498,7 @@ async function handleThesisUpload() {
     }
 }
 
-// Handle add link
+// Handle add link for material (Google Drive, GitHub, etc.)
 async function handleAddLink() {
     const title = linkTitle.value.trim();
     const url = linkUrl.value.trim();
@@ -620,7 +667,6 @@ function handleExamTypeChange() {
 function hideLoadingState() {
     loadingState.classList.add('d-none');
 }
-
 function showNoThesisState() {
     noThesisState.classList.remove('d-none');
 }
@@ -630,7 +676,8 @@ function getStatusText(status) {
         'under-assignment': 'Υπό Ανάθεση',
         'active': 'Ενεργή',
         'under-review': 'Υπό Εξέταση',
-        'completed': 'Ολοκληρωμένη'
+        'completed': 'Ολοκληρωμένη',
+        'cancelled': 'Ακυρωμένη'
     };
     return statusMap[status] || status;
 }
@@ -640,7 +687,8 @@ function getStatusClass(status) {
         'under-assignment': 'bg-warning text-dark',
         'active': 'bg-primary',
         'under-review': 'bg-info',
-        'completed': 'bg-success'
+        'completed': 'bg-success',
+        'cancelled': 'bg-danger'
     };
     return classMap[status] || 'bg-secondary';
 }
@@ -655,6 +703,27 @@ function updateCurrentFileDisplay(filename) {
         currentThesisFile.classList.remove('d-none');
     }
 }
+
+async function getCurrentFile() {
+    try {
+        const response = await fetch('/student/current-thesis-file', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json' 
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.filename) {
+            updateCurrentFileDisplay(data.filename);
+        }
+    } catch (error) {
+        console.error('Error fetching current file:', error);
+    }
+}
+
 
 function escapeHtml(text) {
     if (!text) return '';

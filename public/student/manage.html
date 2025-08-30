@@ -141,7 +141,7 @@
                             Ανεβάστε το προσχέδιο της διπλωματικής σας εργασίας που θα είναι ορατό σε όλα τα μέλη της
                             τριμελούς επιτροπής.
                         </p>
-
+                        
                         <!-- Current Thesis File -->
                         <div id="currentThesisFile" class="alert alert-success d-none">
                             <div class="d-flex justify-content-between align-items-center">
@@ -150,9 +150,14 @@
                                     <strong>Τρέχον αρχείο:</strong> <span id="currentFileName"></span>
                                     <br><small class="text-muted">Ανέβηκε: <span id="uploadDate"></span></small>
                                 </div>
-                                <button class="btn btn-outline-primary btn-sm" id="downloadThesisBtn">
-                                    <i class="bi bi-download"></i> Λήψη
-                                </button>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-outline-primary btn-sm" id="downloadThesisBtn">
+                                        <i class="bi bi-download"></i> Λήψη
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm" id="removeThesisBtn">
+                                        <i class="bi bi-trash"></i> Αφαίρεση
+                                    </button>
+                                </div>
                             </div>
                         </div>
 

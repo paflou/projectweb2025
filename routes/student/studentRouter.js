@@ -2,7 +2,8 @@ var express = require("express");
 var router = express.Router();
 const pool = require("../../db/db");
 const loginRouter = require('../loginRouter');
-
+var formidable = require('formidable');
+const fs = require('fs');
 var path = require("path");
 const checkPermission = require("../../middlewares/checkPermission");
 
@@ -26,15 +27,22 @@ router.get("/profile", checkPermission("student"), (req, res) => {
 
 // Route: GET /student/manage
 // Serve the student manage page
-router.get("/manage", checkPermission("student"), (req, res) => {
-  res.sendFile(path.join(__dirname, "../../public/student/manage.html"));
+router.get("/manage", checkPermission("student"), async (req, res) => {
+  try {
+    const thesisInfo = await getThesisInfo(req);
+    res.locals.thesisInfo = thesisInfo;
+    res.sendFile(path.join(__dirname, "../../public/student/manage.html"));
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server Error");
+  }
 });
 
 // Route: GET /student/thesis-info
 // Get student's thesis information and status
-router.get('/thesis-info', async (req, res) => {
+router.get('/thesis-info', checkPermission('student'), async (req, res) => {
   try {
-    const thesisInfo = await getStudentThesisInfo(req);
+    const thesisInfo = await getThesisInfo(req);
     res.setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify({ thesis: thesisInfo }, (_, v) =>
       typeof v === 'bigint' ? v.toString() : v
@@ -47,7 +55,7 @@ router.get('/thesis-info', async (req, res) => {
 
 // Route: GET /student/committee-status
 // Get committee members and pending invitations
-router.get('/committee-status', async (req, res) => {
+router.get('/committee-status', checkPermission('student'), async (req, res) => {
   try {
     const status = await getCommitteeStatus(req);
     res.setHeader('Content-Type', 'application/json');
@@ -62,7 +70,7 @@ router.get('/committee-status', async (req, res) => {
 
 // Route: GET /student/search-professors
 // Search for professors to invite to committee
-router.get('/search-professors', async (req, res) => {
+router.get('/search-professors', checkPermission('student'), async (req, res) => {
   try {
     const { query } = req.query;
 
@@ -83,7 +91,7 @@ router.get('/search-professors', async (req, res) => {
 
 // Route: GET /student/get-info
 // Fetch and return the student's information as JSON
-router.get('/get-info', async (req, res) => {
+router.get('/get-info', checkPermission('student'), async (req, res) => {
   try {
     // Retrieve student information from the database
     const info = await getStudentInformation(req);
@@ -107,7 +115,7 @@ router.get('/get-info', async (req, res) => {
 
 // Route: POST /student/get-info
 // Update the student's information after authenticating the user
-router.post('/get-info', async (req, res) => {
+router.post('/get-info', checkPermission('student'), async (req, res) => {
   // Destructure the fields from the request body
   const {
     email,
@@ -147,7 +155,7 @@ router.post('/get-info', async (req, res) => {
 
 // Route: POST /student/invite-professor
 // Send invitation to professor for committee membership
-router.post('/invite-professor', async (req, res) => {
+router.post('/invite-professor', checkPermission('student'), async (req, res) => {
   try {
     const { professorId, message } = req.body;
 
@@ -170,10 +178,10 @@ router.post('/invite-professor', async (req, res) => {
 
 // Route: POST /student/upload-thesis
 // Upload thesis file
-router.post('/upload-thesis', async (req, res) => {
+router.post('/upload-thesis', checkPermission('student'), async (req, res) => {
   try {
-    // Handle file upload using formidable (similar to professor router)
-    const result = await handleThesisUpload(req);
+    // Handle file upload using formidable
+    const result = await handleThesisUpload(req, req.session.userId);
 
     if (result.success) {
       res.status(200).json({ message: 'Thesis uploaded successfully', filename: result.filename });
@@ -186,9 +194,128 @@ router.post('/upload-thesis', async (req, res) => {
   }
 });
 
+// Route: GET /student/current-thesis-file
+// Get current thesis file name
+router.get('/current-thesis-file', checkPermission('student'), async (req, res) => {
+  try {
+    const thesisInfo = await getThesisInfo(req);
+    if (thesisInfo && thesisInfo.draft) {
+      res.status(200).json({ filename: thesisInfo.draft });
+    } else {
+      res.status(404).json({ error: 'No thesis file found' });
+    }
+  } catch (err) {
+    console.error('Error in /current-thesis-file:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+router.post('/remove-current-draft', checkPermission('student'), async (req, res) => {
+  try {
+    const thesisInfo = await getThesisInfo(req);
+    if (thesisInfo && thesisInfo.draft) {
+      const filePath = path.join(process.cwd(), 'uploads/theses', thesisInfo.draft);
+      if (fs.existsSync(filePath)) {
+        await fs.promises.unlink(filePath);
+      }
+      await saveFileNameToDB(req.session.userId, null);
+      res.status(200).json({ message: 'Draft removed successfully' });
+    } else {
+      res.status(404).json({ error: 'No draft file to remove' });
+    }
+  } catch (err) {
+    console.error('Error in /remove-current-draft:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Route: GET /student/download-thesis/:filename
+// Download thesis file
+router.get('/download-thesis/:filename', checkPermission('student'), async (req, res) => {
+  try {
+    const { filename } = req.params;
+    const filePath = path.join(process.cwd(), 'uploads/theses', filename);
+    if (fs.existsSync(filePath)) {
+      res.download(filePath);
+    } else {
+      res.status(404).json({ error: 'File not found' });
+    }
+  } catch (err) {
+    console.error('Error in /download-thesis:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Function to handle thesis file upload
+async function handleThesisUpload(req, userId) {
+  const uploadDir = path.join(process.cwd(), 'uploads/theses');
+  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+  const form = new formidable.IncomingForm({
+    keepExtensions: true,
+    maxFileSize: 50 * 1024 * 1024 // 50MB
+  });
+  // Validate file type
+  const allowedTypes = [
+    'application/pdf',                                                          // PDF files
+    'application/vnd.oasis.opendocument.text',                                  // ODT (OpenDocument Text)
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'   // DOCX (modern Word)
+  ];
+
+  return new Promise((resolve, reject) => {
+    form.parse(req, async (err, fields, files) => {
+      if (err) return resolve({ success: false, error: 'File upload error' });
+
+      try {
+        const file = Array.isArray(files.thesis) ? files.thesis[0] : files.thesis;
+        if (!file) return resolve({ success: false, error: 'No file uploaded' });
+
+        if (!allowedTypes.includes(file.mimetype)) {
+          return resolve({ success: false, error: 'Invalid file type. Only PDF, ODT, and DOCX are allowed.' });
+        }
+
+        // Generate unique filename
+        const originalName = path.basename(file.originalFilename);
+        const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2)}-${originalName}`;
+        const newPath = path.join(uploadDir, uniqueName);
+
+        // Move file
+        await fs.promises.copyFile(file.filepath, newPath);
+        await fs.promises.unlink(file.filepath);
+
+        // Save filename to DB
+        await saveFileNameToDB(userId, uniqueName);
+
+        resolve({ success: true, filename: uniqueName });
+      } catch (error) {
+        console.error('Upload error:', error);
+        resolve({ success: false, error: 'Server error during file processing' });
+      }
+    });
+  });
+}
+
+// Save filename to DB
+async function saveFileNameToDB(userId, filename) {
+  const sql = `
+    UPDATE thesis
+    SET draft = ?
+    WHERE student_id = ?
+  `;
+  const params = [filename, userId];
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.query(sql, params);
+  } finally {
+    conn.release();
+  }
+}
+
+
 // Route: POST /student/add-material-link
 // Add additional material link
-router.post('/add-material-link', async (req, res) => {
+router.post('/add-material-link', checkPermission('student'), async (req, res) => {
   try {
     const { title, url } = req.body;
 
@@ -211,7 +338,7 @@ router.post('/add-material-link', async (req, res) => {
 
 // Route: POST /student/save-exam-details
 // Save examination details
-router.post('/save-exam-details', async (req, res) => {
+router.post('/save-exam-details', checkPermission('student'), async (req, res) => {
   try {
     const { examDate, examTime, examType, examLocation } = req.body;
 
@@ -234,7 +361,7 @@ router.post('/save-exam-details', async (req, res) => {
 
 // Route: POST /student/save-repository-link
 // Save library repository link
-router.post('/save-repository-link', async (req, res) => {
+router.post('/save-repository-link', checkPermission('student'), async (req, res) => {
   try {
     const { repositoryLink } = req.body;
 
@@ -257,7 +384,7 @@ router.post('/save-repository-link', async (req, res) => {
 
 // Route: POST /student/cancel-pending-invitations
 // Cancel pending invitations when thesis becomes active
-router.post('/cancel-pending-invitations', async (req, res) => {
+router.post('/cancel-pending-invitations', checkPermission('student'), async (req, res) => {
   try {
     const thesisInfo = await getStudentThesisInfo(req);
     if (!thesisInfo) {
@@ -320,7 +447,7 @@ async function updateStudentInformation(data, userId) {
     // Release the connection and log error if something goes wrong
     conn.release();
     console.error('Error in POST /get-info:', err);
-    res.status(500).send('Server error');
+    throw err; // Let the route handler respond
   }
 }
 
@@ -357,7 +484,7 @@ async function getStudentInformation(req) {
 }
 
 // Function to get student's thesis information
-async function getStudentThesisInfo(req) {
+async function getThesisInfo(req) {
   const sql = `
     SELECT
       t.id,
@@ -366,6 +493,7 @@ async function getStudentThesisInfo(req) {
       t.thesis_status,
       t.submission_date,
       t.pdf,
+      t.draft,
       t.grade,
       u.name as supervisor_name,
       u.surname as supervisor_surname
@@ -389,12 +517,6 @@ async function getStudentThesisInfo(req) {
 
 // Function to get committee status
 async function getCommitteeStatus(req) {
-  // First get the thesis ID
-  const thesisInfo = await getStudentThesisInfo(req);
-  if (!thesisInfo) {
-    return { members: [], pending: [] };
-  }
-
   const sql = `
     SELECT
       ci.id,
@@ -410,7 +532,7 @@ async function getCommitteeStatus(req) {
     ORDER BY ci.sent_at DESC
   `;
 
-  const params = [thesisInfo.id];
+  const params = [req.thesisId];
   const conn = await pool.getConnection();
   try {
     const rows = await conn.query(sql, params);
@@ -470,7 +592,7 @@ async function inviteProfessor(req, professorId, message) {
     await conn.beginTransaction();
 
     // Get student's thesis
-    const thesisInfo = await getStudentThesisInfo(req);
+    const thesisInfo = await getThesisInfo(req);
     if (!thesisInfo) {
       await conn.rollback();
       conn.release();
@@ -524,83 +646,95 @@ async function inviteProfessor(req, professorId, message) {
   }
 }
 
-// Function to handle thesis file upload
-async function handleThesisUpload(req) {
-  // This would use formidable similar to professor router
-  // For now, return a placeholder
-  return { success: true, filename: 'thesis_draft.pdf' };
-}
-
 // Function to add material link
 async function addMaterialLink(req, title, url) {
-  // This would require a new table for material links
-  // For now, return a placeholder
-  return { success: true, linkId: 1 };
-}
-
-// Function to save examination details
-async function saveExamDetails(req, examDetails) {
   const conn = await pool.getConnection();
 
   try {
-    const thesisInfo = await getStudentThesisInfo(req);
+    const thesisInfo = await getThesisInfo(req);
     if (!thesisInfo) {
       conn.release();
       return { success: false, error: 'No thesis found for student' };
+      return { success: true, linkId: 1 };
     }
 
-    // This would require additional fields in thesis table or new table
-    // For now, return success
-    conn.release();
-    return { success: true };
+    // Function to save examination details
+    async function saveExamDetails(req, examDetails) {
+      const conn = await pool.getConnection();
 
+      try {
+        const thesisInfo = await getThesisInfo(req);
+        if (!thesisInfo) {
+          conn.release();
+          return { success: false, error: 'No thesis found for student' };
+        }
+
+        // This would require additional fields in thesis table or new table
+        // For now, return success
+        conn.release();
+        return { success: true };
+
+      } catch (err) {
+        conn.release();
+        throw err;
+      }
+    }
+    // Insert link into additional_thesis_material table
+    const insertSql = `
+      INSERT INTO additional_thesis_material (thesis_id, url)
+      VALUES (?, ?)
+    `;
+    const result = await conn.query(insertSql, [thesisInfo.id, url]);
+    const linkId = result.insertId;
+    conn.release();
+    return { success: true, linkId };
   } catch (err) {
     conn.release();
     throw err;
   }
 }
 
-// Function to save repository link
-async function saveRepositoryLink(req, repositoryLink) {
-  const conn = await pool.getConnection();
+    // Function to save repository link
+    async function saveRepositoryLink(req, repositoryLink) {
+      const conn = await pool.getConnection();
 
-  try {
-    const thesisInfo = await getStudentThesisInfo(req);
-    if (!thesisInfo) {
-      conn.release();
-      return { success: false, error: 'No thesis found for student' };
+      try {
+        const thesisInfo = await getThesisInfo(req);
+        if (!thesisInfo) {
+          conn.release();
+          return { success: false, error: 'No thesis found for student' };
+        }
+
+        // This would require additional field in thesis table
+        // For now, return success
+        conn.release();
+        return { success: true };
+
+      } catch (err) {
+        conn.release();
+        throw err;
+      }
     }
 
-    // This would require additional field in thesis table
-    // For now, return success
-    conn.release();
-    return { success: true };
+    // Function to cancel pending invitations when thesis becomes active
+    async function cancelPendingInvitations(thesisId) {
+      const conn = await pool.getConnection();
 
-  } catch (err) {
-    conn.release();
-    throw err;
-  }
-}
-
-// Function to cancel pending invitations when thesis becomes active
-async function cancelPendingInvitations(thesisId) {
-  const conn = await pool.getConnection();
-
-  try {
-    const cancelSql = `
+      try {
+        const cancelSql = `
       UPDATE committee_invitation
       SET status = 'cancelled'
       WHERE thesis_id = ? AND status = 'pending'
     `;
-    await conn.query(cancelSql, [thesisId]);
-    conn.release();
-    return { success: true };
+        await conn.query(cancelSql, [thesisId]);
+        conn.release();
+        return { success: true };
 
-  } catch (err) {
-    conn.release();
-    throw err;
-  }
-}
+      } catch (err) {
+        conn.release();
+        throw err;
+      }
+    }
 
 
-module.exports = router;
+    module.exports = router;

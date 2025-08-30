@@ -120,7 +120,11 @@ function submitThesis(req, res, action) {
   const fsPromises = fs.promises;
 
   // Define the directory to store uploaded files
-  const uploadDir = path.join(process.cwd(), 'uploads');
+  const uploadDir = path.join(process.cwd(), 'uploads/theses_descriptions');
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
   form.keepExtensions = true;
 
   // Parse the incoming request containing fields and files
@@ -241,9 +245,10 @@ async function getRelevantThesis(req) {
     throw err;
   }
 }
+
 // Route: GET /professor/get-relevant-thesis
 // Fetch and return the thesis the professor is supervising or is committee member of
-router.get('/get-relevant-thesis', async (req, res) => {
+router.get('/get-relevant-thesis',checkPermission('professor'), async (req, res) => {
   try {
     // Retrieve student information from the database
     const info = await getRelevantThesis(req);
@@ -267,7 +272,7 @@ router.get('/get-relevant-thesis', async (req, res) => {
 
 // Function to delete a thesis by ID
 // Only the professor who created the thesis can delete it
-router.delete('/delete-topic', async (req, res) => {
+router.delete('/delete-topic',checkPermission('professor'), async (req, res) => {
   const sql = `
     DELETE FROM thesis
     WHERE id = ? AND supervisor_id = ?
@@ -303,7 +308,7 @@ router.delete('/delete-topic', async (req, res) => {
 
 // Route: GET /professor/get-info
 // Fetch and return the professors thesis' under assignment as JSON
-router.get('/get-under-assignment', async (req, res) => {
+router.get('/get-under-assignment',checkPermission('professor'), async (req, res) => {
   try {
     // Retrieve student information from the database
     const info = await getUnderAssignment(req);
@@ -327,11 +332,11 @@ router.get('/get-under-assignment', async (req, res) => {
 
 // Route: POST /professor/create-topic/
 // Saves a new thesis created by a professor
-router.post('/create-topic', (req, res) => {
+router.post('/create-topic',checkPermission('professor'), (req, res) => {
   submitThesis(req, res, 'insert');
 });
 
-router.post('/update-topic', (req, res) => {
+router.post('/update-topic',checkPermission('professor'), (req, res) => {
   submitThesis(req, res, 'update');
 });
 
@@ -379,7 +384,7 @@ router.get("/manage", checkPermission("professor"), (req, res) => {
 
 // Route: GET /professor/search-students
 // Search for students by student number or name
-router.get('/search-students', async (req, res) => {
+router.get('/search-students',checkPermission('professor'), async (req, res) => {
   try {
     const { query } = req.query;
 
@@ -400,7 +405,7 @@ router.get('/search-students', async (req, res) => {
 
 // Route: GET /professor/available-topics
 // Get available thesis topics for assignment
-router.get('/available-topics', async (req, res) => {
+router.get('/available-topics',checkPermission('professor'), async (req, res) => {
   try {
     const topics = await getAvailableTopics(req);
     res.setHeader('Content-Type', 'application/json');
@@ -415,7 +420,7 @@ router.get('/available-topics', async (req, res) => {
 
 // Route: GET /professor/temporary-assignments
 // Get temporary assignments awaiting committee approval
-router.get('/temporary-assignments', async (req, res) => {
+router.get('/temporary-assignments',checkPermission('professor'), async (req, res) => {
   try {
     const assignments = await getTemporaryAssignments(req);
     res.setHeader('Content-Type', 'application/json');
@@ -430,7 +435,7 @@ router.get('/temporary-assignments', async (req, res) => {
 
 // Route: POST /professor/assign-thesis
 // Assign a thesis to a student
-router.post('/assign-thesis', async (req, res) => {
+router.post('/assign-thesis',checkPermission('professor'), async (req, res) => {
   try {
     const { thesisId, studentId } = req.body;
 
@@ -453,7 +458,7 @@ router.post('/assign-thesis', async (req, res) => {
 
 // Route: POST /professor/cancel-assignment
 // Cancel a thesis assignment by removing student_id
-router.post('/cancel-assignment', async (req, res) => {
+router.post('/cancel-assignment', checkPermission('professor'), async (req, res) => {
   try {
     const { thesisId } = req.body;
 
@@ -476,7 +481,7 @@ router.post('/cancel-assignment', async (req, res) => {
 
 // Route: GET /professor/get-invitations
 // Get committee invitations for the professor
-router.get('/get-invitations', async (req, res) => {
+router.get('/get-invitations', checkPermission('professor'), async (req, res) => {
   try {
     const invitations = await getProfessorInvitations(req);
     res.setHeader('Content-Type', 'application/json');
@@ -491,7 +496,7 @@ router.get('/get-invitations', async (req, res) => {
 
 // Route: POST /professor/accept-invitation
 // Accept a committee invitation
-router.post('/accept-invitation', async (req, res) => {
+router.post('/accept-invitation',checkPermission('professor'), async (req, res) => {
   try {
     const { invitationId } = req.body;
 
@@ -514,7 +519,7 @@ router.post('/accept-invitation', async (req, res) => {
 
 // Route: POST /professor/reject-invitation
 // Reject a committee invitation
-router.post('/reject-invitation', async (req, res) => {
+router.post('/reject-invitation',checkPermission('professor'), async (req, res) => {
   try {
     const conn = await pool.getConnection();
     const { invitationId } = req.body;
@@ -538,7 +543,7 @@ router.post('/reject-invitation', async (req, res) => {
 
 // Route: POST /professor/leave-comittee
 // Leave a committee for a thesis
-router.post('/leave-comittee', async (req, res) => {
+router.post('/leave-comittee', checkPermission('professor'), async (req, res) => {
   try {
     const { thesisId, invitationId } = req.body;
 
@@ -697,18 +702,6 @@ async function assignThesisToStudent(req, thesisId, studentId) {
       return { success: false, error: 'Thesis is already assigned to another student' };
     }
 
-    // Verify that the student exists
-    const checkStudentSql = `
-      SELECT id FROM student WHERE id = ?
-    `;
-    const studentRows = await conn.query(checkStudentSql, [studentId]);
-
-    if (studentRows.length === 0) {
-      await conn.rollback();
-      conn.release();
-      return { success: false, error: 'Student not found' };
-    }
-
     // Update the thesis with the student ID
     const updateSql = `
       UPDATE thesis
@@ -798,8 +791,6 @@ async function cancelThesisAssignment(req, thesisId) {
     throw err;
   }
 }
-
-
 
 // Function to get professor invitations
 async function getProfessorInvitations(req) {
@@ -1061,7 +1052,6 @@ async function leaveComittee(req, thesisId, invitationId) {
     throw err;
   }
 }
-
 
 // Export the router to be used in the main app
 module.exports = router;
