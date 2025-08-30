@@ -150,9 +150,14 @@
                                     <strong>Τρέχον αρχείο:</strong> <span id="currentFileName"></span>
                                     <br><small class="text-muted">Ανέβηκε: <span id="uploadDate"></span></small>
                                 </div>
-                                <button class="btn btn-outline-primary btn-sm" id="downloadThesisBtn">
-                                    <i class="bi bi-download"></i> Λήψη
-                                </button>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-outline-primary btn-sm" id="downloadThesisBtn">
+                                        <i class="bi bi-download"></i> Λήψη
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm" id="removeThesisBtn">
+                                        <i class="bi bi-trash"></i> Αφαίρεση
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -178,17 +183,12 @@
                             <i class="bi bi-link-45deg me-2"></i>
                             Επιπλέον Υλικό
                         </h5>
-                    </div>
-                    <div class="card-body">
                         <p class="text-muted mb-3">
                             Προσθέστε συνδέσμους σε επιπλέον υλικό (π.χ. Google Drive, YouTube videos, κ.λπ.)
                         </p>
 
-                        <!-- Existing Links -->
-                        <div id="existingLinks" class="mb-3">
-                            <!-- Existing links will be populated here -->
-                        </div>
-
+                    </div>
+                    <div class="card-body">
                         <!-- Add New Link -->
                         <div class="row">
                             <div class="col-md-4">
@@ -203,11 +203,19 @@
                                 </button>
                             </div>
                         </div>
+                        <p class="mt-3">
+                            Υπάρχοντες σύνδεσμοι:
+                        </p>
+                        <!-- Existing Links -->
+                        <div id="existingLinks" class="mb-3">
+                            <!-- Existing links will be populated here -->
+                        </div>
                     </div>
+
                 </div>
 
                 <!-- Examination Details -->
-                <div class="card mb-4">
+                <div class="card mb-4" id='examDetailsCard'>
                     <div class="card-header">
                         <h5 class="mb-0">
                             <i class="bi bi-calendar-event me-2"></i>
@@ -242,7 +250,7 @@
                         </div>
 
                         <!-- Examination Location/Link -->
-                        <div class="row mt-3">
+                        <div class="row mt-3 d-none" id="examLocationRow">
                             <div class="col-md-12">
                                 <label for="examLocation" class="form-label"
                                     id="examLocationLabel">Τοποθεσία/Σύνδεσμος</label>
@@ -257,6 +265,49 @@
                         <div class="mt-3">
                             <button class="btn btn-success" id="saveExamDetailsBtn">
                                 <i class="bi bi-save"></i> Αποθήκευση Στοιχείων Εξέτασης
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scheduled Examination Details -->
+                <div class="card mb-4 d-none" id="scheduledExamCard">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-calendar-check me-2"></i>
+                            Προγραμματισμένη Εξέταση
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            Τα στοιχεία της εξέτασής σας έχουν καταχωρηθεί.
+                        </p>
+
+                        <div class="row mb-2">
+                            <div class="col-md-6">
+                                <strong>Ημερομηνία:</strong>
+                                <span id="displayExamDate">-</span>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Ώρα:</strong>
+                                <span id="displayExamTime">-</span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2">
+                            <div class="col-md-6">
+                                <strong>Τρόπος:</strong>
+                                <span id="displayExamType">-</span>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Τοποθεσία/Σύνδεσμος:</strong>
+                                <span id="displayExamLocation">-</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <button class="btn btn-primary" id="editExamDetailsBtn">
+                                <i class="bi bi-pencil"></i> Επεξεργασία Στοιχείων
                             </button>
                         </div>
                     </div>
@@ -282,7 +333,7 @@
                 </div>
 
                 <!-- Library Repository Link -->
-                <div class="card mb-4">
+                <div class="card mb-4" id="repositoryCard">
                     <div class="card-header">
                         <h5 class="mb-0">
                             <i class="bi bi-archive me-2"></i>
@@ -307,6 +358,35 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Saved Library Repository Link -->
+                <div class="card mb-4 d-none" id="savedRepositoryCard">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-archive me-2"></i>
+                            Αποθετήριο Βιβλιοθήκης (Νεμέρτης)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            Ο σύνδεσμος προς το αποθετήριο σας έχει καταχωρηθεί.
+                        </p>
+
+                        <div class="row align-items-center mb-2">
+                            <div class="col-md-10">
+                                <a href="#" target="_blank" rel="noopener noreferrer" id="displayRepositoryLink">
+                                    <!-- Repository URL will go here -->
+                                </a>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary w-100" id="editRepositoryBtn">
+                                    <i class="bi bi-pencil"></i> Επεξεργασία
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- Completed Status -->

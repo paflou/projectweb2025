@@ -38,6 +38,25 @@ const saveExamDetailsBtn = document.getElementById('saveExamDetailsBtn');
 const repositoryLink = document.getElementById('repositoryLink');
 const saveRepositoryBtn = document.getElementById('saveRepositoryBtn');
 
+// Active elements
+const downloadThesisBtn = document.getElementById('downloadThesisBtn');
+const removeThesisBtn = document.getElementById('removeThesisBtn');
+const examLocationRow = document.getElementById('examLocationRow');
+const examLocationLabel = document.getElementById('examLocationLabel');
+const examLocationHelp = document.getElementById('examLocationHelp');
+const scheduledExamCard = document.getElementById('scheduledExamCard');
+const displayExamDate = document.getElementById('displayExamDate');
+const displayExamTime = document.getElementById('displayExamTime');
+const displayExamType = document.getElementById('displayExamType');
+const displayExamLocation = document.getElementById('displayExamLocation');
+const examDetailsCard = document.getElementById('examDetailsCard');
+const displayRepositoryLink = document.getElementById('displayRepositoryLink');
+const savedRepositoryCard = document.getElementById('savedRepositoryCard');
+const savedRepositoryLink = document.getElementById('savedRepositoryLink');
+const editExamDetailsBtn = document.getElementById('editExamDetailsBtn');
+const repositoryCard = document.getElementById('repositoryCard');
+const editRepositoryBtn = document.getElementById('editRepositoryBtn');
+
 // Modal elements
 const inviteProfessorModal = document.getElementById('inviteProfessorModal');
 const professorInviteDetails = document.getElementById('professorInviteDetails');
@@ -49,9 +68,10 @@ let currentThesis = null;
 let selectedProfessor = null;
 
 // Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     initializeEventListeners();
     loadThesisInfo();
+    getRepositoryLink();
 });
 
 function initializeEventListeners() {
@@ -59,9 +79,27 @@ function initializeEventListeners() {
     if (searchProfessorBtn) {
         searchProfessorBtn.addEventListener('click', handleProfessorSearch);
     }
-    
+
+    if (downloadThesisBtn) {
+        downloadThesisBtn.addEventListener('click', () => {
+            if (currentThesis && currentThesis.draft) {
+                window.location.href = `/student/download-thesis/${currentThesis.draft}`;
+            } else {
+                showError('Δεν υπάρχει διαθέσιμη διπλωματική για λήψη');
+            }
+        });
+    }
+
+    if (removeThesisBtn) {
+        removeThesisBtn.addEventListener('click', () => {
+            if (confirm('Είστε σίγουροι ότι θέλετε να αφαιρέσετε το τρέχον αρχείο διπλωματικής;')) {
+                removeCurrentDraft();
+            }
+        });
+    }
+
     if (professorSearch) {
-        professorSearch.addEventListener('keypress', function(e) {
+        professorSearch.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 handleProfessorSearch();
             }
@@ -86,6 +124,7 @@ function initializeEventListeners() {
     // Save repository link
     if (saveRepositoryBtn) {
         saveRepositoryBtn.addEventListener('click', handleSaveRepository);
+
     }
 
     // Exam type change
@@ -96,6 +135,56 @@ function initializeEventListeners() {
     // Confirm invitation
     if (confirmInviteBtn) {
         confirmInviteBtn.addEventListener('click', handleConfirmInvite);
+    }
+
+    if (editExamDetailsBtn) {
+        editExamDetailsBtn.addEventListener('click', () => {
+            // populate form with existing details
+            if (currentThesis && currentThesis.exam_datetime) {
+                const examDateTime = new Date(currentThesis.exam_datetime);
+                examDate.value = examDateTime.toISOString().split('T')[0];
+                examTime.value = examDateTime.toTimeString().split(' ')[0].slice(0, 5); // HH:MM
+                examType.value = currentThesis.exam_mode;
+                examLocation.value = currentThesis.exam_location;
+                handleExamTypeChange();
+            }
+            // Show exam details form
+            examDetailsCard.classList.remove('d-none');
+            // Hide scheduled exam card
+            scheduledExamCard.classList.add('d-none');
+        });
+    }
+
+    if (editRepositoryBtn) {
+        editRepositoryBtn.addEventListener('click', () => {
+            // Populate input with existing link
+            if (savedRepositoryLink && savedRepositoryLink.textContent) {
+                repositoryLink.value = savedRepositoryLink.textContent;
+            }
+            // Show repository input
+            repositoryCard.classList.remove('d-none');
+            // Hide saved repository card
+            savedRepositoryCard.classList.add('d-none');
+        });
+    }
+}
+
+async function removeCurrentDraft() {
+    try {
+        const response = await fetch('/student/remove-current-draft', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        showSuccess('Το τρέχον αρχείο διπλωματικής αφαιρέθηκε επιτυχώς!');
+        currentThesisFile.classList.add('d-none');
+    } catch (error) {
+        console.error('Error removing current thesis file:', error);
+        showError('Σφάλμα κατά την αφαίρεση του αρχείου διπλωματικής');
     }
 }
 
@@ -114,20 +203,28 @@ async function loadThesisInfo() {
         }
 
         const data = await response.json();
-        
+
         hideLoadingState();
-        
+
         if (!data.thesis) {
             showNoThesisState();
         } else {
             currentThesis = data.thesis;
             displayThesisInfo(data.thesis);
             showStatusSection(data.thesis.thesis_status);
-            
+
             // Load additional data based on status
             if (data.thesis.thesis_status === 'under-assignment') {
                 loadCommitteeStatus();
                 startStatusPolling(); // Start polling for status changes
+            }
+            else if (data.thesis.thesis_status === 'under-review' || data.thesis.thesis_status === 'active') {
+                getCurrentFile();
+                loadMaterialLinks();
+                if (data.thesis.exam_datetime !== null) {
+                    console.log(data.thesis)
+                    populateExamDetails(data.thesis.exam_datetime, data.thesis.exam_mode, data.thesis.exam_location);
+                }
             }
         }
 
@@ -144,13 +241,13 @@ function displayThesisInfo(thesis) {
     thesisDescription.textContent = thesis.description || 'Δεν υπάρχει περιγραφή';
     supervisorName.textContent = `${thesis.supervisor_name} ${thesis.supervisor_surname}`;
     assignmentDate.textContent = new Date(thesis.submission_date).toLocaleDateString('el-GR');
-    
+
     // Set status badge
     const statusText = getStatusText(thesis.thesis_status);
     const statusClass = getStatusClass(thesis.thesis_status);
     thesisStatusBadge.textContent = statusText;
     thesisStatusBadge.className = `badge ${statusClass}`;
-    
+
     thesisInfoCard.classList.remove('d-none');
 }
 
@@ -160,7 +257,7 @@ function showStatusSection(status) {
     underAssignmentSection.classList.add('d-none');
     underExaminationSection.classList.add('d-none');
     completedSection.classList.add('d-none');
-    
+
     // Show appropriate section
     switch (status) {
         case 'under-assignment':
@@ -232,47 +329,47 @@ function displayCommitteeStatus(status) {
 function createCommitteeMemberItem(member, type) {
     const item = document.createElement('div');
     item.className = 'list-group-item';
-    
-    const statusIcon = type === 'accepted' ? 
-        '<i class="bi bi-check-circle text-success me-2"></i>' : 
+
+    const statusIcon = type === 'accepted' ?
+        '<i class="bi bi-check-circle text-success me-2"></i>' :
         '<i class="bi bi-clock text-warning me-2"></i>';
-    
+
     item.innerHTML = `
         ${statusIcon}
         <strong>${escapeHtml(member.name)} ${escapeHtml(member.surname)}</strong><br>
         <small class="text-muted">${escapeHtml(member.topic)} - ${escapeHtml(member.department)}</small>
     `;
-    
+
     return item;
 }
 
 // Handle professor search
 async function handleProfessorSearch() {
     const query = professorSearch.value.trim();
-    
+
     if (query.length < 2) {
         showError('Παρακαλώ εισάγετε τουλάχιστον 2 χαρακτήρες για αναζήτηση');
         return;
     }
-    
+
     try {
         searchProfessorBtn.disabled = true;
         searchProfessorBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Αναζήτηση...';
-        
+
         const response = await fetch(`/student/search-professors?query=${encodeURIComponent(query)}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
         displayProfessorSearchResults(data.professors);
-        
+
     } catch (error) {
         console.error('Error searching professors:', error);
         showError('Σφάλμα κατά την αναζήτηση καθηγητών');
@@ -404,9 +501,13 @@ async function handleThesisUpload() {
     }
 
     // Validate file type
-    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const allowedTypes = [
+        'application/pdf',                                                          // PDF files
+        'application/vnd.oasis.opendocument.text',                                  // ODT (OpenDocument Text)
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'   // DOCX (modern Word)
+    ];
     if (!allowedTypes.includes(file.type)) {
-        showError('Μη υποστηριζόμενος τύπος αρχείου. Επιτρέπονται μόνο PDF, DOC, DOCX');
+        showError('Μη υποστηριζόμενος τύπος αρχείου. Επιτρέπονται μόνο PDF, ODF, DOCX');
         return;
     }
 
@@ -422,7 +523,7 @@ async function handleThesisUpload() {
 
         const formData = new FormData();
         formData.append('thesis', file);
-
+        console.log(formData)
         const response = await fetch('/student/upload-thesis', {
             method: 'POST',
             body: formData
@@ -451,7 +552,7 @@ async function handleThesisUpload() {
     }
 }
 
-// Handle add link
+// Handle add link for material (Google Drive, GitHub, etc.)
 async function handleAddLink() {
     const title = linkTitle.value.trim();
     const url = linkUrl.value.trim();
@@ -492,8 +593,8 @@ async function handleAddLink() {
         linkTitle.value = '';
         linkUrl.value = '';
 
-        // Refresh links display (placeholder)
-        // loadMaterialLinks();
+        // Refresh links display
+        loadMaterialLinks();
 
     } catch (error) {
         console.error('Error adding link:', error);
@@ -504,6 +605,85 @@ async function handleAddLink() {
     }
 }
 
+async function loadMaterialLinks() {
+    try {
+        const response = await fetch('/student/material-links', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        // console.log('Material Links:', data.links); // Debug log
+
+        displayMaterialLinks(data.links);
+    } catch (error) {
+        console.error('Error loading material links:', error);
+        showError('Σφάλμα κατά τη φόρτωση των συνδέσμων υλικού');
+    }
+}
+
+function displayMaterialLinks(links) {
+    existingLinks.innerHTML = '';
+    if (!links || links.length === 0) {
+        existingLinks.innerHTML = '<div class="text-muted small">Δεν υπάρχουν προστιθέμενοι σύνδεσμοι</div>';
+        return;
+    }
+
+    links.forEach(link => {
+        const linkItem = document.createElement('div');
+        linkItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+        linkItem.innerHTML = `
+            <div class="d-flex align-items-center">
+                <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="m-2">
+                <span class="me-2 text-truncate">
+                    ${escapeHtml(link.url)}
+                </span>
+                </a>
+            </div>
+            <button class="btn btn-sm btn-outline-danger delete-link-btn" data-id="${link.id}">
+                <i class="bi bi-trash"></i>
+            </button>
+        `;
+
+        existingLinks.appendChild(linkItem);
+    });
+
+    // delete button listeners
+    document.querySelectorAll('.delete-link-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const id = this.getAttribute('data-id');
+            //console.log('Delete link with id:', id);
+
+            if (confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον σύνδεσμο;')) {
+                // Call delete API
+                fetch(`/student/material-links/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        showSuccess('Ο σύνδεσμος διαγράφηκε επιτυχώς!');
+                        loadMaterialLinks(); // Refresh links
+                    })
+                    .catch(error => {
+                        console.error('Error deleting link:', error);
+                        showError('Σφάλμα κατά τη διαγραφή του συνδέσμου');
+                    });
+            }
+        });
+    });
+}
+
+
 // Handle save exam details
 async function handleSaveExamDetails() {
     const examDateValue = examDate.value;
@@ -511,8 +691,36 @@ async function handleSaveExamDetails() {
     const examTypeValue = examType.value;
     const examLocationValue = examLocation.value.trim();
 
+    console.log({ examDateValue, examTimeValue, examTypeValue, examLocationValue });
+
     if (!examDateValue || !examTimeValue || !examTypeValue || !examLocationValue) {
         showError('Παρακαλώ συμπληρώστε όλα τα στοιχεία εξέτασης');
+        return;
+    }
+
+    if (examTypeValue === 'in-person' && examLocationValue.length < 5) {
+        showError('Παρακαλώ εισάγετε έγκυρη αίθουσα και κτίριο για τη δια ζώσης εξέταση');
+        return;
+    }
+    else if (examTypeValue === 'online') {
+        try {
+            new URL(examLocationValue);
+        } catch {
+            showError('Μη έγκυρος σύνδεσμος για τη διαδικτυακή εξέταση');
+            return;
+        }
+    }
+
+    let nextYear = new Date();
+    nextYear.setFullYear(nextYear.getFullYear() + 1);
+    let formatted = nextYear.toISOString().split('T')[0];
+
+    if (examDateValue < new Date().toISOString().split('T')[0]) {
+        showError('Η ημερομηνία εξέτασης δεν μπορεί να είναι στο παρελθόν');
+        return;
+    }
+    else if (examDateValue > formatted) {
+        showError('Η ημερομηνία εξέτασης δεν μπορεί να είναι πέρα από ένα έτος από σήμερα');
         return;
     }
 
@@ -539,6 +747,7 @@ async function handleSaveExamDetails() {
         }
 
         showSuccess('Τα στοιχεία εξέτασης αποθηκεύτηκαν επιτυχώς!');
+        populateExamDetails(`${examDateValue}T${examTimeValue}`, examTypeValue, examLocationValue);
 
     } catch (error) {
         console.error('Error saving exam details:', error);
@@ -549,6 +758,7 @@ async function handleSaveExamDetails() {
     }
 }
 
+
 // Handle save repository link
 async function handleSaveRepository() {
     const repositoryLinkValue = repositoryLink.value.trim();
@@ -558,9 +768,15 @@ async function handleSaveRepository() {
         return;
     }
 
-    // Basic URL validation
+    // URL validation
     try {
-        new URL(repositoryLinkValue);
+        const url = new URL(repositoryLinkValue);
+
+        if (url.hostname !== 'nemertes.library.upatras.gr') {
+            showError('Ο σύνδεσμος αποθετηρίου πρέπει να είναι από το nemertes.library.upatras.gr');
+            return;
+        }
+
     } catch {
         showError('Μη έγκυρος σύνδεσμος');
         return;
@@ -586,7 +802,7 @@ async function handleSaveRepository() {
         }
 
         showSuccess('Ο σύνδεσμος αποθετηρίου αποθηκεύτηκε επιτυχώς!');
-
+        getRepositoryLink();
     } catch (error) {
         console.error('Error saving repository link:', error);
         showError(`Σφάλμα κατά την αποθήκευση: ${error.message}`);
@@ -598,18 +814,20 @@ async function handleSaveRepository() {
 
 // Handle exam type change
 function handleExamTypeChange() {
-    const examLocationLabel = document.getElementById('examLocationLabel');
-    const examLocationHelp = document.getElementById('examLocationHelp');
-
     if (examType.value === 'in-person') {
+        examLocationRow.classList.remove('d-none');
+
         examLocationLabel.textContent = 'Αίθουσα Εξέτασης';
         examLocation.placeholder = 'π.χ. Αίθουσα Α1, Κτίριο Μηχανικών';
         examLocationHelp.textContent = 'Εισάγετε την αίθουσα και το κτίριο όπου θα γίνει η εξέταση.';
     } else if (examType.value === 'online') {
+        examLocationRow.classList.remove('d-none');
         examLocationLabel.textContent = 'Σύνδεσμος Τηλεδιάσκεψης';
         examLocation.placeholder = 'π.χ. https://zoom.us/j/123456789';
         examLocationHelp.textContent = 'Εισάγετε τον σύνδεσμο για τη διαδικτυακή εξέταση.';
     } else {
+        examLocationRow.classList.add('d-none');
+
         examLocationLabel.textContent = 'Τοποθεσία/Σύνδεσμος';
         examLocation.placeholder = 'Αίθουσα εξέτασης ή σύνδεσμος τηλεδιάσκεψης';
         examLocationHelp.textContent = 'Για δια ζώσης εξέταση: Αίθουσα και κτίριο. Για διαδικτυακή: Σύνδεσμος τηλεδιάσκεψης.';
@@ -620,7 +838,6 @@ function handleExamTypeChange() {
 function hideLoadingState() {
     loadingState.classList.add('d-none');
 }
-
 function showNoThesisState() {
     noThesisState.classList.remove('d-none');
 }
@@ -630,7 +847,8 @@ function getStatusText(status) {
         'under-assignment': 'Υπό Ανάθεση',
         'active': 'Ενεργή',
         'under-review': 'Υπό Εξέταση',
-        'completed': 'Ολοκληρωμένη'
+        'completed': 'Ολοκληρωμένη',
+        'cancelled': 'Ακυρωμένη'
     };
     return statusMap[status] || status;
 }
@@ -640,7 +858,8 @@ function getStatusClass(status) {
         'under-assignment': 'bg-warning text-dark',
         'active': 'bg-primary',
         'under-review': 'bg-info',
-        'completed': 'bg-success'
+        'completed': 'bg-success',
+        'cancelled': 'bg-danger'
     };
     return classMap[status] || 'bg-secondary';
 }
@@ -654,6 +873,40 @@ function updateCurrentFileDisplay(filename) {
         uploadDate.textContent = new Date().toLocaleDateString('el-GR');
         currentThesisFile.classList.remove('d-none');
     }
+}
+
+async function getCurrentFile() {
+    try {
+        const response = await fetch('/student/current-thesis-file', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.filename) {
+            updateCurrentFileDisplay(data.filename);
+        }
+    } catch (error) {
+        console.error('Error fetching current file:', error);
+    }
+}
+
+function populateExamDetails(dateTime, type, location) {
+    if (!dateTime) return;
+
+    examDetailsCard.classList.add('d-none');
+    console.log('Populating exam details:', dateTime, type, location);
+
+    const examDateObj = new Date(dateTime);
+    displayExamDate.textContent = examDateObj.toLocaleDateString('el-GR');
+    displayExamTime.textContent = examDateObj.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' });
+    displayExamType.textContent = type === 'in-person' ? 'Δια Ζώσης' : 'Διαδικτυακή';
+    displayExamLocation.textContent = location;
+    scheduledExamCard.classList.remove('d-none');
 }
 
 function escapeHtml(text) {
@@ -709,6 +962,32 @@ async function cancelRemainingInvitations() {
         }
     } catch (error) {
         console.error('Error cancelling pending invitations:', error);
+    }
+}
+
+async function getRepositoryLink() {
+    try {
+        const response = await fetch('/student/repository-link', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.repositoryLink) {
+            repositoryLink.value = data.repositoryLink;
+            displayRepositoryLink.href = data.repositoryLink;
+            displayRepositoryLink.textContent = data.repositoryLink;
+
+            // Show saved repository card, hide input
+            savedRepositoryCard.classList.remove('d-none');
+            repositoryCard.classList.add('d-none');
+        }
+    } catch (error) {
+        console.error('Error fetching repository link:', error);
     }
 }
 
