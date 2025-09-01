@@ -183,7 +183,7 @@ async function getUnderAssignment(req) {
 
     // Return the first row if found, otherwise null
     if (rows.length > 0) {
-      console.log(rows)
+      //console.log(rows)
       return rows;
     } else {
       return null;
@@ -205,6 +205,7 @@ async function getRelevantThesis(req) {
       t.description,
       t.pdf,
       t.thesis_status AS status,
+      t.final_repository_link,
       CONCAT(s.name, ' ', s.surname) AS student_name,
       CONCAT(p.name, ' ', p.surname) AS supervisor_name,
       CONCAT(c1.name, ' ', c1.surname) AS member1_name,
@@ -234,7 +235,7 @@ async function getRelevantThesis(req) {
 
     // Return the first row if found, otherwise null
     if (rows.length > 0) {
-      console.log(rows)
+      //console.log(rows)
       return rows;
     } else {
       return null;
@@ -1016,7 +1017,8 @@ async function leaveComittee(req, thesisId, invitationId) {
       SET 
           member1_id = CASE WHEN member1_id = ? THEN NULL ELSE member1_id END,
           member2_id = CASE WHEN member2_id = ? THEN NULL ELSE member2_id END,
-          supervisor_id = CASE WHEN supervisor_id = ? THEN NULL ELSE supervisor_id END
+          supervisor_id = CASE WHEN supervisor_id = ? THEN NULL ELSE supervisor_id END,
+          thesis_status = 'under-assignment'
       WHERE id = ?
       AND (? IN (member1_id, member2_id, supervisor_id))
     `;
@@ -1028,10 +1030,10 @@ async function leaveComittee(req, thesisId, invitationId) {
       thesisId,           // WHERE id
       req.session.userId  // ensure professor is in comittee
     ];
-    console.log('DEBUG: SQL Query:', removeProfessorSql);
-    console.log('DEBUG: Params:', params);
+    //console.log('DEBUG: SQL Query:', removeProfessorSql);
+    //console.log('DEBUG: Params:', params);
     const result = await conn.execute(removeProfessorSql, params);
-    console.log('DEBUG result:', result);
+    //console.log('DEBUG result:', result);
 
     await conn.commit();
 
@@ -1049,6 +1051,52 @@ async function leaveComittee(req, thesisId, invitationId) {
     await conn.rollback();
     conn.release();
     console.error('Error in leaveComittee:', err);
+    throw err;
+  }
+}
+
+router.get('/get-thesis-timeline/:id', checkPermission('professor'), async (req, res) => {
+  try {
+    const thesisId = req.params.id;
+    if (!thesisId) {
+      return res.status(400).json({ error: 'Thesis ID is required' });
+    }
+    
+    const timeline = await getThesisTimeline(thesisId);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify({ timeline }, (_, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    ));
+  } catch (err) {
+    console.error('Error in /get-thesis-timeline:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+async function getThesisTimeline(thesisId) {
+  const sql = `
+    SELECT
+      action,
+      created_at as event_date,
+      user_role,
+      user.name,
+      user.surname
+    FROM thesis_log
+    LEFT JOIN user
+    ON thesis_log.user_id = user.id
+    WHERE thesis_id = ?
+    ORDER BY event_date ASC
+  `;
+
+  const params = [thesisId];
+
+  const conn = await pool.getConnection();
+  try {
+    const rows = await conn.query(sql, params);
+    conn.release();
+    return rows || [];
+  } catch (err) {
+    conn.release();
     throw err;
   }
 }

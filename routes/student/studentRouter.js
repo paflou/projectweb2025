@@ -829,11 +829,18 @@ async function inviteProfessor(req, professorId, message) {
 
     // Check if professor is already invited or is the supervisor
     const checkSql = `
-      SELECT COUNT(*) as count FROM committee_invitation
-      WHERE thesis_id = ? AND professor_id = ?
+      SELECT COUNT(*) AS count 
+      FROM committee_invitation
+      WHERE thesis_id = ? 
+        AND professor_id = ?
+        AND status IN ('pending','accepted')
+
       UNION ALL
-      SELECT COUNT(*) as count FROM thesis
-      WHERE id = ? AND supervisor_id = ?
+
+      SELECT COUNT(*) AS count 
+      FROM thesis
+      WHERE id = ? 
+      AND supervisor_id = ?;
     `;
     const checkRows = await conn.query(checkSql, [thesisInfo.id, professorId, thesisInfo.id, professorId]);
 

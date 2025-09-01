@@ -23,6 +23,7 @@ const detailFinalGrade = document.getElementById('detailFinalGrade');
 const detailRepositoryLink = document.getElementById('detailRepositoryLink');
 const detailEvaluationFormLink = document.getElementById('detailEvaluationFormLink');
 const actionBtn = document.getElementById('actionBtn');
+const completeThesisInfo = document.getElementById('completeThesisInfo');
 
 // State variables
 let allThesis = [];
@@ -52,7 +53,7 @@ async function loadThesis() {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
 
-        console.log('Fetched thesis data:', data);
+        //console.log('Fetched thesis data:', data);
         allThesis = data || [];
         applyFilters();
     } catch (error) {
@@ -66,9 +67,9 @@ async function loadThesis() {
 // Apply filters
 function applyFilters() {
     const status = statusFilter.value;
-    console.log("Selected status filter:", status);
+    //console.log("Selected status filter:", status);
     const role = roleFilter.value;
-    console.log("allThesis:", allThesis);
+    //console.log("allThesis:", allThesis);
     filteredThesis = allThesis.info.filter(t => {
         let statusMatch = !status || t.status === status;
         let roleMatch = !role || t.user_role === role;
@@ -112,8 +113,52 @@ function displayThesis() {
     });
 }
 
+async function getTimelineForThesis(thesisId) {
+    try {
+        const response = await fetch(`/prof/get-thesis-timeline/${thesisId}`, { method: 'GET' });
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        return data.timeline || '-';
+    } catch (error) {
+        console.error('Error fetching timeline:', error);
+        return '-';
+    }
+}
+
+async function renderTimeline(thesisId) {
+    const timeline = await getTimelineForThesis(thesisId);
+
+    const tbody = document.querySelector('#detailTimeline tbody');
+    // Clear previous content
+    tbody.innerHTML = '';
+
+    if (!Array.isArray(timeline) || timeline.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="3">-</td>';
+        tbody.appendChild(tr);
+        return;
+    }
+
+    timeline.forEach(event => {
+        const tr = document.createElement('tr');
+
+        const action = event.action || '-';
+        const name = event.name ? event.name.concat(" ", event.surname) : 'Σύστημα';
+        const role = event.user_role || '-';
+        const date = new Date(event.event_date).toLocaleString() || '-';
+
+        tr.innerHTML = `
+            <td>${action}</td>
+            <td>${name}</td>
+            <td>${role}</td>
+            <td>${date}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
 // Show thesis details modal
-function showThesisDetails(thesis) {
+async function showThesisDetails(thesis) {
 
     selectedThesis = thesis;
 
@@ -131,29 +176,41 @@ function showThesisDetails(thesis) {
     // Status
     detailStatus.textContent = formatStatus(thesis.status);
 
-    // Timeline placeholder (not in table)
-    detailTimeline.innerHTML = '';
 
-    // Final grade
-    detailFinalGrade.textContent = thesis.grade !== null ? thesis.grade : '-';
+    await renderTimeline(thesis.id);
 
-    // Repository and evaluation form links placeholders
-    detailRepositoryLink.href = '#';
-    detailEvaluationFormLink.href = '#';
+    console.log(thesis)
+    if (thesis.status === 'completed') {
+        // Final grade
+        detailFinalGrade.textContent = thesis.grade !== null ? thesis.grade : '-';
 
-    // Action button based on role and status
-    actionBtn.disabled = thesis.status !== 'active';
-    actionBtn.textContent = thesis.user_role === 'supervisor' ? 'Διαχείριση' : 'Προβολή';
-    actionBtn.onclick = () => handleThesisAction(thesis);
+        // Repository and evaluation form links placeholders
+
+
+        detailRepositoryLink.href = thesis.final_repository_link;
+        detailEvaluationFormLink.href = '#';
+
+        completeThesisInfo.classList.remove('d-none');
+    }
+    else {
+        completeThesisInfo.classList.add('d-none');
+    }
+    // Action button navigates to management page
+    actionBtn.textContent = 'Διαχείριση Διπλωματικής';
+    actionBtn.onclick = () => goToThesisManagementPage(thesis);
 
     // Show modal
     thesisDetailsModal.show();
 }
 
-// Handle action button
-function handleThesisAction(thesis) {
-    alert(`Ενέργεια για τη διπλωματική: ${thesis.title}`);
-    // You can implement status updates, evaluation, etc. here
+async function goToThesisManagementPage(thesis) {
+    if (!thesis || !thesis.id) {
+        alert('Σφάλμα: Μη έγκυρη διπλωματική εργασία.');
+        return;
+    }
+
+    // Redirect to management page
+    window.location.href = `/prof/manage-thesis/${thesis.id}`;
 }
 
 // Export data

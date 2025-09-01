@@ -54,7 +54,7 @@
                 <div id="noThesisMessage" class="alert alert-info text-center d-none" role="alert">
                     <h4 class="alert-heading">Δεν υπάρχουν διπλωματικές</h4>
                     <p class="mb-0">Δεν υπάρχουν διπλωματικές για το επιλεγμένο φίλτρο.</p>
-                </div> 
+                </div>
 
                 <!-- Error message -->
                 <div id="errorMessage" class="alert alert-danger text-center d-none" role="alert">
@@ -115,15 +115,29 @@
                     <p><strong>Κατάσταση:</strong> <span id="detailStatus"></span></p>
                     <hr>
                     <h6>Χρονολόγιο Ενεργειών</h6>
-                    <ul id="detailTimeline">
-                        <!-- Timeline entries will appear here -->
-                    </ul>
-                    <hr>
-                    <p><strong>Τελικός Βαθμός:</strong> <span id="detailFinalGrade"></span></p>
-                    <p><strong>Σύνδεσμοι Αρχείων:</strong> 
-                        <a href="#" id="detailRepositoryLink" target="_blank">Τελικό Κείμενο</a> | 
-                        <a href="#" id="detailEvaluationFormLink" target="_blank">Έντυπο Αξιολόγησης</a>
-                    </p>
+                    <table id="detailTimeline" class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Ενέργεια</th>
+                                <th>Ονοματεπώνυμο</th>
+                                <th>Ρόλος</th>
+                                <th>Ημερομηνία</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Timeline rows will appear here -->
+                        </tbody>
+                    </table>
+
+                    <div class="d-none" id="completeThesisInfo">
+                        <hr>
+                        <p><strong>Τελικός Βαθμός:</strong> <span id="detailFinalGrade"></span></p>
+                        <p><strong>Σύνδεσμοι Αρχείων:</strong>
+                            <a href="#" id="detailRepositoryLink" target="_blank">Τελικό Κείμενο</a> |
+                            <a href="#" id="detailEvaluationFormLink" target="_blank">Έντυπο Αξιολόγησης</a>
+                        </p>
+                    </div>
+
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Κλείσιμο</button>
@@ -137,7 +151,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous">
-    </script>
+        </script>
     <script src="/js/loadPartials.js"></script>
     <script src="/js/viewRelevantThesis.js"></script>
 </body>

@@ -315,82 +315,66 @@ INSERT INTO professor (id, topic, department, university) VALUES
 (148, 'spagetti aldente', 'cuccina italiana', 'Carbonara University'),
 (149, 'Basketball Strategy', 'SEF', 'University of Gate 7');
 
+-- ================================
+-- Thesis examples (one per status)
+-- ================================
 INSERT INTO thesis (id, title, description, student_id, supervisor_id, member1_id, member2_id, thesis_status) VALUES
+-- under-assignment (only 1 member is OK)
 (1, 'Edge Computing for IoT', 'Optimizing IoT devices with edge computing.', 10000, 101, 103, NULL, 'under-assignment'),
-(2, 'Smart Agriculture Sensors', 'IoT-based monitoring for precision farming.', 10001, 102, 101, NULL, 'active'),
-(3, 'AI in Cybersecurity', 'AI-driven threat detection and prevention systems.', 10002, 103, 101, NULL, 'under-review'),
-(4, 'Machine Learning in Healthcare', 'Improving diagnostics with ML algorithms.', 10003, 146, 102, NULL, 'completed'),
-(5, 'Blockchain in Supply Chain', 'Enhancing transparency using blockchain.', 10004, 101, 103, NULL, 'canceled'),
-(6, 'Renewable Energy Optimization', 'Smart grid solutions for renewables.', 10005, 102, 146, NULL, 'active'),
-(7, 'Autonomous Vehicle Navigation', 'Developing navigation systems for AVs.', 10006, 103, 102, NULL, 'under-review'),
-(8, 'Cloud Security Challenges', 'Addressing vulnerabilities in cloud systems.', 10007, 146, 101, NULL, 'completed'),
-(9, 'Virtual Reality in Education', 'Using VR for immersive learning.', 10008, 101, 146, NULL, 'under-assignment'),
-(10, 'Smart Grid Technologies', 'Modernizing electrical grids with IoT.', 10009, 102, 101, NULL, 'active'),
-(11, 'Deep Learning for Image Recognition', 'Advanced image recognition models.', 10010, 103, 146, NULL, 'under-review'),
-(12, '5G Network Optimization', 'Enhancing performance of 5G networks.', 10011, 146, 101, NULL, 'completed'),
-(13, 'Natural Language Processing', 'Improving language models for applications.', 10012, 101, 103, NULL, 'canceled'),
-(14, 'IoT Device Security', 'Securing IoT devices against cyberattacks.', 10013, 102, 103, NULL, 'active'),
-(15, 'Computer Vision in Robotics', 'Applying CV for robotic automation.', 10014, 103, 101, NULL, 'under-review');
+
+-- active (2 members required)
+(2, 'Smart Agriculture Sensors', 'IoT-based monitoring for precision farming.', 10001, 102, 101, 146, 'active'),
+
+-- under-review (2 members required)
+(3, 'AI in Cybersecurity', 'AI-driven threat detection and prevention systems.', 10002, 103, 101, 146, 'under-review'),
+
+-- canceled (2 members required)
+(4, 'Blockchain in Supply Chain', 'Enhancing transparency using blockchain.', 10004, 101, 103, 146, 'canceled');
+
+INSERT INTO thesis (
+    id, title, description, student_id, supervisor_id, member1_id, member2_id, thesis_status,
+    pdf, draft, exam_datetime, exam_mode, exam_location, final_repository_link, submission_date, grade
+) VALUES
+-- completed thesis with all fields
+(5,
+ 'Machine Learning in Healthcare',
+ 'Improving diagnostics with ML algorithms.',
+ 10003,
+ 146,   -- supervisor_id
+ 102,   -- member1_id
+ 103,   -- member2_id
+ 'completed',
+ 'ml_healthcare_supervisor.pdf',      -- professor-uploaded PDF
+ 'ml_healthcare_student_draft.pdf',   -- student-submitted draft
+ '2025-09-15 10:00:00',               -- exam_datetime
+ 'in-person',                         -- exam_mode
+ 'Room 203, CS Building',             -- exam_location
+ 'https://nemertes.library.upatras.gr/repo/ml_healthcare',  -- final_repository_link
+ CURRENT_TIMESTAMP,                   -- submission_date
+ 9.25                                  -- grade
+);
 
 
-
+-- =========================================
+-- Matching committee invitations (aligned)
+-- =========================================
 INSERT INTO committee_invitation (thesis_id, professor_id, status) VALUES
--- Thesis 1: Edge Computing for IoT (supervisor = 101)
+-- Thesis 1: under-assignment (only member1=103 is fixed, others may still be pending)
 (1, 102, 'pending'),
 (1, 103, 'accepted'),
 
--- Thesis 2: Smart Agriculture Sensors (supervisor = 102)
+-- Thesis 2: active (members 101 and 146 → must be accepted)
 (2, 101, 'accepted'),
-(2, 146, 'pending'),
+(2, 146, 'accepted'),
 
--- Thesis 3: AI in Cybersecurity (supervisor = 103)
+-- Thesis 3: under-review (members 101 and 146 → must be accepted)
 (3, 101, 'accepted'),
-(3, 146, 'rejected'),
+(3, 146, 'accepted'),
 
--- Thesis 4: Machine Learning in Healthcare (supervisor = 146)
-(4, 101, 'pending'),
+-- Thesis 4: completed (members 102 and 103 → must be accepted)
 (4, 102, 'accepted'),
+(4, 103, 'accepted'),
 
--- Thesis 5: Blockchain in Supply Chain (supervisor = 101)
+-- Thesis 5: canceled (members 103 and 146 → must be accepted)
 (5, 103, 'accepted'),
-(5, 146, 'pending'),
-
--- Thesis 6: Renewable Energy Optimization (supervisor = 102)
-(6, 103, 'pending'),
-(6, 146, 'accepted'),
-
--- Thesis 7: Autonomous Vehicle Navigation (supervisor = 103)
-(7, 101, 'pending'),
-(7, 102, 'accepted'),
-
--- Thesis 8: Cloud Security Challenges (supervisor = 146)
-(8, 101, 'accepted'),
-(8, 103, 'rejected'),
-
--- Thesis 9: Virtual Reality in Education (supervisor = 101)
-(9, 102, 'pending'),
-(9, 146, 'accepted'),
-
--- Thesis 10: Smart Grid Technologies (supervisor = 102)
-(10, 101, 'accepted'),
-(10, 103, 'pending'),
-
--- Thesis 11: Deep Learning for Image Recognition (supervisor = 103)
-(11, 101, 'pending'),
-(11, 146, 'accepted'),
-
--- Thesis 12: 5G Network Optimization (supervisor = 146)
-(12, 101, 'accepted'),
-(12, 102, 'rejected'),
-
--- Thesis 13: Natural Language Processing (supervisor = 101)
-(13, 103, 'accepted'),
-(13, 146, 'pending'),
-
--- Thesis 14: IoT Device Security (supervisor = 102)
-(14, 101, 'pending'),
-(14, 103, 'accepted'),
-
--- Thesis 15: Computer Vision in Robotics (supervisor = 103)
-(15, 101, 'accepted'),
-(15, 146, 'pending');
+(5, 146, 'accepted');
