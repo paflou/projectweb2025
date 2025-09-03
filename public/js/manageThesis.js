@@ -271,6 +271,8 @@ function showStatusSection(status) {
             break;
         case 'completed':
             completedSection.classList.remove('d-none');
+            setupCompletedThesisEventListeners();
+            populateCompletedThesisInfo();
             break;
     }
 }
@@ -991,9 +993,337 @@ async function getRepositoryLink() {
     }
 }
 
+// Completed thesis functionality
+function setupCompletedThesisEventListeners() {
+    const viewCompletedReportBtn = document.getElementById('viewCompletedReportBtn');
+    const downloadCompletedThesisBtn = document.getElementById('downloadCompletedThesisBtn');
+    const printReportBtn = document.getElementById('printReportBtn');
+
+    if (viewCompletedReportBtn) {
+        viewCompletedReportBtn.addEventListener('click', viewExaminationReport);
+    }
+
+    if (downloadCompletedThesisBtn) {
+        downloadCompletedThesisBtn.addEventListener('click', downloadFinalThesis);
+    }
+
+    if (printReportBtn) {
+        printReportBtn.addEventListener('click', printExaminationReport);
+    }
+}
+
+function viewExaminationReport() {
+    // Show examination report modal
+    const examinationReportModal = new bootstrap.Modal(document.getElementById('examinationReportModal'));
+
+    // Populate examination report content
+    populateExaminationReport();
+
+    examinationReportModal.show();
+}
+
+function populateExaminationReport() {
+    if (!currentThesis) return;
+
+    const reportContent = document.getElementById('reportContent');
+    if (!reportContent) return;
+
+    // Create examination report content
+    const reportHtml = `
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h6 class="text-primary">Στοιχεία Διπλωματικής</h6>
+                <p><strong>Τίτλος:</strong> ${currentThesis.title}</p>
+                <p><strong>Φοιτητής:</strong> ${currentThesis.student_name || 'Δεν διατίθεται'}</p>
+                <p><strong>Επιβλέπων:</strong> ${currentThesis.supervisor_name} ${currentThesis.supervisor_surname}</p>
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-primary">Στοιχεία Εξέτασης</h6>
+                <p><strong>Ημερομηνία:</strong> ${currentThesis.exam_datetime ? new Date(currentThesis.exam_datetime).toLocaleDateString('el-GR') : 'Δεν διατίθεται'}</p>
+                <p><strong>Τρόπος:</strong> ${currentThesis.exam_mode === 'in-person' ? 'Δια ζώσης' : currentThesis.exam_mode === 'online' ? 'Διαδικτυακά' : 'Δεν διατίθεται'}</p>
+                <p><strong>Τοποθεσία:</strong> ${currentThesis.exam_location || 'Δεν διατίθεται'}</p>
+            </div>
+        </div>
+        <div class="row mb-4">
+            <div class="col-12">
+                <h6 class="text-primary">Αποτέλεσμα Εξέτασης</h6>
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <strong>Επιτυχής ολοκλήρωση</strong>
+                    ${currentThesis.grade ? `<br>Τελικός βαθμός: <strong>${currentThesis.grade}/10</strong>` : ''}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <h6 class="text-primary">Σχόλια Επιτροπής</h6>
+                <p class="text-muted">Η διπλωματική εργασία ολοκληρώθηκε επιτυχώς και πληροί όλες τις απαιτήσεις του προγράμματος σπουδών.</p>
+            </div>
+        </div>
+    `;
+
+    reportContent.innerHTML = reportHtml;
+}
+
+function downloadFinalThesis() {
+    if (!currentThesis || !currentThesis.draft) {
+        showError('Δεν υπάρχει διαθέσιμο αρχείο για λήψη.');
+        return;
+    }
+
+    // Create download link for the final thesis
+    const downloadLink = document.createElement('a');
+    downloadLink.href = `/uploads/${currentThesis.draft}`;
+    downloadLink.download = currentThesis.draft;
+    downloadLink.style.display = 'none';
+
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+
+    showSuccess('Η λήψη του τελικού κειμένου ξεκίνησε.');
+}
+
+function printExaminationReport() {
+    // Get the modal content
+    const reportContent = document.getElementById('reportContent');
+    if (!reportContent) {
+        showError('Δεν υπάρχει διαθέσιμη αναφορά για εκτύπωση.');
+        return;
+    }
+
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Αναφορά Εξέτασης Διπλωματικής Εργασίας</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+            <style>
+                @media print {
+                    .no-print { display: none !important; }
+                    body { font-size: 12pt; }
+                    .card { border: 1px solid #000 !important; }
+                }
+                body { padding: 20px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h2 class="text-center mb-4">Αναφορά Εξέτασης Διπλωματικής Εργασίας</h2>
+                ${reportContent.innerHTML}
+            </div>
+        </body>
+        </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+
+    // Wait for content to load then print
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 500);
+}
+
+async function populateCompletedCommitteeMembers() {
+    const completedCommitteeMembers = document.getElementById('completedCommitteeMembers');
+    if (!completedCommitteeMembers || !currentThesis) return;
+
+    try {
+        // Fetch detailed thesis info to get committee member names
+        const response = await fetch('/student/detailed-thesis-info');
+        if (!response.ok) {
+            throw new Error('Failed to fetch detailed thesis info');
+        }
+
+        const data = await response.json();
+        const thesis = data.thesis;
+
+        let committeeHtml = `
+            <div class="mb-2">
+                <strong>Επιβλέπων:</strong> ${thesis.supervisor_name} ${thesis.supervisor_surname}
+                <br><small class="text-muted">${thesis.supervisor_topic || ''}</small>
+            </div>
+        `;
+
+        if (thesis.member1_name) {
+            committeeHtml += `
+                <div class="mb-2">
+                    <strong>Μέλος 1:</strong> ${thesis.member1_name} ${thesis.member1_surname}
+                    <br><small class="text-muted">${thesis.member1_topic || ''}</small>
+                </div>
+            `;
+        }
+
+        if (thesis.member2_name) {
+            committeeHtml += `
+                <div class="mb-2">
+                    <strong>Μέλος 2:</strong> ${thesis.member2_name} ${thesis.member2_surname}
+                    <br><small class="text-muted">${thesis.member2_topic || ''}</small>
+                </div>
+            `;
+        }
+
+        completedCommitteeMembers.innerHTML = committeeHtml;
+
+    } catch (error) {
+        console.error('Error fetching committee members:', error);
+        completedCommitteeMembers.innerHTML = '<p class="text-muted">Δεν ήταν δυνατή η φόρτωση των στοιχείων της επιτροπής.</p>';
+    }
+}
+
+async function populateStatusHistory() {
+    const statusHistory = document.getElementById('statusHistory');
+    if (!statusHistory || !currentThesis) return;
+
+    try {
+        // Fetch thesis timeline/history
+        const response = await fetch(`/student/thesis-timeline/${currentThesis.id}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch thesis timeline');
+        }
+
+        const data = await response.json();
+        const timeline = data.timeline || [];
+
+        // Debug: log the timeline data
+        console.log('Timeline data received:', timeline);
+
+        if (timeline.length === 0) {
+            statusHistory.innerHTML = '<p class="text-muted">Δεν υπάρχει διαθέσιμο ιστορικό.</p>';
+            return;
+        }
+
+        // Create timeline HTML
+        const timelineHtml = timeline.map(event => {
+            const eventDate = new Date(event.event_date);
+            let formattedDate = 'Άγνωστη ημερομηνία';
+            let formattedTime = '';
+
+            // Check if date is valid
+            if (!isNaN(eventDate.getTime())) {
+                formattedDate = eventDate.toLocaleDateString('el-GR');
+                formattedTime = eventDate.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' });
+            }
+
+            let actionText = '';
+            let iconClass = '';
+            let badgeClass = '';
+
+            switch (event.action) {
+                case 'created':
+                    actionText = 'Δημιουργία διπλωματικής';
+                    iconClass = 'bi-plus-circle';
+                    badgeClass = 'bg-primary';
+                    break;
+                case 'assigned':
+                    actionText = 'Ανάθεση σε φοιτητή';
+                    iconClass = 'bi-person-plus';
+                    badgeClass = 'bg-info';
+                    break;
+                case 'active':
+                    actionText = 'Ενεργοποίηση (πλήρης επιτροπή)';
+                    iconClass = 'bi-check-circle';
+                    badgeClass = 'bg-success';
+                    break;
+                case 'under_review':
+                    actionText = 'Υποβολή για εξέταση';
+                    iconClass = 'bi-eye';
+                    badgeClass = 'bg-warning';
+                    break;
+                case 'completed':
+                    actionText = 'Ολοκλήρωση διπλωματικής';
+                    iconClass = 'bi-award';
+                    badgeClass = 'bg-success';
+                    break;
+                case 'draft_updated':
+                    actionText = 'Ενημέρωση κειμένου';
+                    iconClass = 'bi-file-earmark-text';
+                    badgeClass = 'bg-secondary';
+                    break;
+                default:
+                    actionText = event.action;
+                    iconClass = 'bi-circle';
+                    badgeClass = 'bg-secondary';
+            }
+
+            return `
+                <div class="d-flex align-items-center mb-2">
+                    <div class="me-3">
+                        <span class="badge ${badgeClass}">
+                            <i class="${iconClass}"></i>
+                        </span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-medium">${actionText}</div>
+                        <small class="text-muted">${formattedDate}${formattedTime ? ` στις ${formattedTime}` : ''}</small>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        statusHistory.innerHTML = timelineHtml;
+
+    } catch (error) {
+        console.error('Error fetching status history:', error);
+        statusHistory.innerHTML = '<p class="text-muted">Δεν ήταν δυνατή η φόρτωση του ιστορικού.</p>';
+    }
+}
+
+function populateCompletedThesisInfo() {
+    if (!currentThesis) return;
+
+    // Populate committee members
+    populateCompletedCommitteeMembers();
+
+    // Populate status history
+    populateStatusHistory();
+
+    // Populate exam details
+    const completedExamDate = document.getElementById('completedExamDate');
+    const completedExamTime = document.getElementById('completedExamTime');
+    const completedExamType = document.getElementById('completedExamType');
+    const completedExamLocation = document.getElementById('completedExamLocation');
+
+    if (currentThesis.exam_datetime) {
+        const examDate = new Date(currentThesis.exam_datetime);
+        if (completedExamDate) completedExamDate.textContent = examDate.toLocaleDateString('el-GR');
+        if (completedExamTime) completedExamTime.textContent = examDate.toLocaleTimeString('el-GR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    if (completedExamType) {
+        completedExamType.textContent = currentThesis.exam_mode === 'in-person' ? 'Δια ζώσης' :
+                                       currentThesis.exam_mode === 'online' ? 'Διαδικτυακά' : 'Δεν διατίθεται';
+    }
+
+    if (completedExamLocation) {
+        completedExamLocation.textContent = currentThesis.exam_location || 'Δεν διατίθεται';
+    }
+
+    // Populate final grade
+    const finalGrade = document.getElementById('finalGrade');
+    if (finalGrade) {
+        finalGrade.textContent = currentThesis.grade ? currentThesis.grade : '-';
+    }
+
+    // Populate repository link
+    const repositoryLinkBtn = document.getElementById('repositoryLinkBtn');
+    if (repositoryLinkBtn && currentThesis.final_repository_link) {
+        repositoryLinkBtn.href = currentThesis.final_repository_link;
+        repositoryLinkBtn.classList.remove('d-none');
+    } else if (repositoryLinkBtn) {
+        repositoryLinkBtn.classList.add('d-none');
+    }
+}
+
 // Export functions for potential use by other scripts
 window.manageThesis = {
     loadThesisInfo: loadThesisInfo,
     loadCommitteeStatus: loadCommitteeStatus,
-    startStatusPolling: startStatusPolling
+    startStatusPolling: startStatusPolling,
+    setupCompletedThesisEventListeners: setupCompletedThesisEventListeners,
+    populateCompletedThesisInfo: populateCompletedThesisInfo
 };

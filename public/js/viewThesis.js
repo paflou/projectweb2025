@@ -125,6 +125,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 thesisStatusBadge.classList.add('bg-info');
                 thesisStatusBadge.textContent = 'Υπό Εξέταση';
                 break;
+            case 'completed':
+                thesisStatusBadge.classList.add('bg-success');
+                thesisStatusBadge.textContent = 'Ολοκληρωμένη';
+                break;
             default:
                 thesisStatusBadge.classList.add('bg-secondary');
                 thesisStatusBadge.textContent = 'Άγνωστη';
@@ -237,6 +241,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p class="mb-0">
                         <i class="bi bi-info-circle me-2"></i>
                         Αναμένετε την ολοκλήρωση της εξέτασης και την ανακοίνωση των αποτελεσμάτων.
+                    </p>
+                `;
+                break;
+            case 'completed':
+                statusHtml = `
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <strong>Ολοκληρωμένη:</strong> Η διπλωματική εργασία έχει ολοκληρωθεί επιτυχώς.
+                        ${thesis.grade ? `Τελικός βαθμός: <strong>${thesis.grade}/10</strong>` : ''}
+                    </div>
+                    <p class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Μπορείτε να δείτε την αναφορά εξέτασης και τα στοιχεία της διπλωματικής από τη σελίδα
+                        <a href="/student/manage" class="text-decoration-none">Διαχείριση Διπλωματικής</a>.
                     </p>
                 `;
                 break;

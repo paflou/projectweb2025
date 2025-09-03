@@ -14,6 +14,8 @@ const {
   saveRepositoryLink
 } = require("../../services/studentService");
 
+const { getThesisTimeline } = require("../../services/professorService");
+
 // Route: GET /student/thesis-info
 // Get student's thesis information and status
 router.get('/thesis-info', checkPermission('student'), async (req, res) => {
@@ -258,6 +260,32 @@ router.get('/repository-link', checkPermission('student'), async (req, res) => {
     }
   } catch (err) {
     console.error('Error in /repository-link:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Route: GET /student/thesis-timeline/:id
+// Get thesis timeline/history for student's own thesis
+router.get('/thesis-timeline/:id', checkPermission('student'), async (req, res) => {
+  try {
+    const thesisId = req.params.id;
+    if (!thesisId) {
+      return res.status(400).json({ error: 'Thesis ID is required' });
+    }
+
+    // Verify that the thesis belongs to the current student
+    const thesisInfo = await getThesisInfo(req);
+    if (!thesisInfo || thesisInfo.id != thesisId) {
+      return res.status(403).json({ error: 'Access denied to this thesis' });
+    }
+
+    const timeline = await getThesisTimeline(thesisId);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify({ timeline }, (_, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    ));
+  } catch (err) {
+    console.error('Error in /thesis-timeline:', err);
     res.status(500).json({ error: 'Server Error' });
   }
 });
