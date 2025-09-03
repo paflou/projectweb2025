@@ -709,6 +709,22 @@ async function getThesisTimeline(thesisId) {
   }
 }
 
+async function deleteThesis(thesisId, supervisorId) {
+  const sql = `
+    DELETE FROM thesis
+    WHERE id = ? AND supervisor_id = ?
+  `;
+  const params = [thesisId, supervisorId];
+
+  const conn = await pool.getConnection();
+  try {
+    const [result] = await conn.query(sql, params); // Destructure result
+    return result;
+  } finally {
+    conn.release();
+  }
+}
+
 module.exports = {
   insertThesisToDB,
   getUnderAssignment,
@@ -723,5 +739,7 @@ module.exports = {
   acceptInvitation,
   rejectInvitation,
   leaveComittee,
-  getThesisTimeline
+  getThesisTimeline,
+  deleteThesis
 };
+

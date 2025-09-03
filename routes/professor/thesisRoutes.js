@@ -13,12 +13,13 @@ const {
   cancelThesisAssignment,
   searchStudents,
   getTemporaryAssignments,
-  getThesisTimeline
+  getThesisTimeline,
+  deleteThesis
 } = professorService;
 
 
 // Fetch and return the theses the professor is supervising or is committee member of
-router.get('/get-relevant-thesis',checkPermission('professor'), async (req, res) => {
+router.get('/get-relevant-thesis', checkPermission('professor'), async (req, res) => {
   try {
     // Retrieve student information from the database
     const info = await getRelevantThesis(req);
@@ -40,40 +41,29 @@ router.get('/get-relevant-thesis',checkPermission('professor'), async (req, res)
   }
 });
 
-// Function to delete a thesis by ID
-// Only the professor who created the thesis can delete it
-router.delete('/delete-topic',checkPermission('professor'), async (req, res) => {
-  const sql = `
-    DELETE FROM thesis
-    WHERE id = ? AND supervisor_id = ?
-  `;
-
-  const params = [req.body.id, req.session.userId];
-
-  console.log("QUERY: " + sql)
-  console.log("ID: " + params)
-
-  const conn = await pool.getConnection();
+router.delete('/delete-topic', checkPermission('professor'), async (req, res) => {
   try {
-    const rows = await conn.query(sql, params);
-    conn.release();
+    const id = req.body.id;
+    if (!id) {
+      return res.status(400).send('Thesis ID is required');
+    }
 
-    if (rows.affectedRows > 0) {
-      res.status(200).send("Thesis deleted successfully");
+    const result = await deleteThesis(id, req.session.userId);
+
+    if (result.affectedRows > 0) {
+      res.status(200).send('Thesis deleted successfully');
     } else {
-      res.status(404).send("Thesis not found");
+      res.status(404).send('Thesis not found or not owned by you');
     }
   } catch (err) {
-    conn.release();
     console.error('Error in DELETE /delete-topic:', err);
     res.status(500).send('Server error');
   }
 }
 );
 
-// Route: GET /professor/get-info
 // Fetch and return the professors thesis' under assignment as JSON
-router.get('/get-under-assignment',checkPermission('professor'), async (req, res) => {
+router.get('/get-under-assignment', checkPermission('professor'), async (req, res) => {
   try {
     // Retrieve student information from the database
     const info = await getUnderAssignment(req);
@@ -95,22 +85,17 @@ router.get('/get-under-assignment',checkPermission('professor'), async (req, res
   }
 });
 
-// Route: POST /professor/create-topic/
 // Saves a new thesis created by a professor
-router.post('/create-topic',checkPermission('professor'), (req, res) => {
+router.post('/create-topic', checkPermission('professor'), (req, res) => {
   submitThesis(req, res, 'insert');
 });
 
-// Route: POST /professor/update-topic/
-// Updates an existing thesis created by a professor
-router.post('/update-topic',checkPermission('professor'), (req, res) => {
+router.post('/update-topic', checkPermission('professor'), (req, res) => {
   submitThesis(req, res, 'update');
 });
 
 
-// Route: GET /professor/available-topics
-// Get available thesis topics for assignment
-router.get('/available-topics',checkPermission('professor'), async (req, res) => {
+router.get('/available-topics', checkPermission('professor'), async (req, res) => {
   try {
     const topics = await getAvailableTopics(req);
     res.setHeader('Content-Type', 'application/json');
@@ -123,9 +108,7 @@ router.get('/available-topics',checkPermission('professor'), async (req, res) =>
   }
 });
 
-// Route: GET /professor/temporary-assignments
-// Get temporary assignments awaiting committee approval
-router.get('/temporary-assignments',checkPermission('professor'), async (req, res) => {
+router.get('/temporary-assignments', checkPermission('professor'), async (req, res) => {
   try {
     const assignments = await getTemporaryAssignments(req);
     res.setHeader('Content-Type', 'application/json');
@@ -138,9 +121,7 @@ router.get('/temporary-assignments',checkPermission('professor'), async (req, re
   }
 });
 
-// Route: POST /professor/assign-thesis
-// Assign a thesis to a student
-router.post('/assign-thesis',checkPermission('professor'), async (req, res) => {
+router.post('/assign-thesis', checkPermission('professor'), async (req, res) => {
   try {
     const { thesisId, studentId } = req.body;
 
@@ -161,8 +142,6 @@ router.post('/assign-thesis',checkPermission('professor'), async (req, res) => {
   }
 });
 
-// Route: POST /professor/cancel-assignment
-// Cancel a thesis assignment by removing student_id
 router.post('/cancel-assignment', checkPermission('professor'), async (req, res) => {
   try {
     const { thesisId } = req.body;
@@ -184,14 +163,13 @@ router.post('/cancel-assignment', checkPermission('professor'), async (req, res)
   }
 });
 
-
 router.get('/get-thesis-timeline/:id', checkPermission('professor'), async (req, res) => {
   try {
     const thesisId = req.params.id;
     if (!thesisId) {
       return res.status(400).json({ error: 'Thesis ID is required' });
     }
-    
+
     const timeline = await getThesisTimeline(thesisId);
     res.setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify({ timeline }, (_, v) =>
@@ -203,7 +181,7 @@ router.get('/get-thesis-timeline/:id', checkPermission('professor'), async (req,
   }
 });
 
-router.get('/search-students',checkPermission('professor'), async (req, res) => {
+router.get('/search-students', checkPermission('professor'), async (req, res) => {
   try {
     const { query } = req.query;
 
@@ -220,6 +198,17 @@ router.get('/search-students',checkPermission('professor'), async (req, res) => 
     console.error('Error in /search-students:', err);
     res.status(500).json({ error: 'Server Error' });
   }
+});
+
+router.get('/manage/:id', checkPermission('professor'), async (req, res) => {
+  const thesisId = req.params.id;
+
+  if (!thesisId) {
+    return res.status(400).send('Thesis ID is required');
+  }  
+
+  // Logic to manage the thesis with the given ID
+  res.send(`Manage thesis with ID: ${thesisId}`);
 });
 
 module.exports = router;

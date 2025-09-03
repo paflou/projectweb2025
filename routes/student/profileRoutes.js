@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const loginRouter = require('../loginRouter');
+const checkPermission = require("../../middlewares/checkPermission");
+
 const {
   getStudentInformation,
   updateStudentInformation

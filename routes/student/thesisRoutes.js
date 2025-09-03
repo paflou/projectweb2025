@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require("path");
 const checkPermission = require("../../middlewares/checkPermission");
 const handleThesisUpload = require("../../middlewares/handleFileUpload");
+
 const {
   getThesisInfo,
   getDetailedThesisInfo,
