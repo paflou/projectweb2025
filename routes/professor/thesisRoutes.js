@@ -14,7 +14,8 @@ const {
   searchStudents,
   getTemporaryAssignments,
   getThesisTimeline,
-  deleteThesis
+  deleteThesis,
+  getInstructorStatistics
 } = professorService;
 
 
@@ -205,10 +206,24 @@ router.get('/manage/:id', checkPermission('professor'), async (req, res) => {
 
   if (!thesisId) {
     return res.status(400).send('Thesis ID is required');
-  }  
+  }
 
   // Logic to manage the thesis with the given ID
   res.send(`Manage thesis with ID: ${thesisId}`);
+});
+
+// Get instructor statistics
+router.get('/statistics', checkPermission('professor'), async (req, res) => {
+  try {
+    const statistics = await getInstructorStatistics(req);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify({ statistics }, (_, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    ));
+  } catch (err) {
+    console.error('Error in /statistics:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
 });
 
 module.exports = router;
