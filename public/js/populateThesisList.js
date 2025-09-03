@@ -114,7 +114,7 @@ async function populateThesisTable() {
 
             const link = document.getElementById('pdfDownload');
             if (info[i].pdf !== "NULL") {
-                let uploadPath = '/uploads/' + info[i].pdf;
+                let uploadPath = '/uploads/theses_descriptions/' + info[i].pdf;
                 link.href = uploadPath;
                 link.classList.remove('d-none');
             }

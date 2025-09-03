@@ -8,9 +8,9 @@ const fs = require('fs');
 // Import route handlers
 var homepageRouter = require("./routes/homepageRouter");
 var { router: loginRouter } = require('./routes/loginRouter');
-var professorRouter = require("./routes/professor/professorRouter");
-var studentRouter = require("./routes/student/studentRouter");
-var secretaryRouter = require("./routes/secretary/secretaryRouter");
+var professorRouter = require("./routes/professor/index");
+var studentRouter = require("./routes/student/index");
+var secretaryRouter = require("./routes/secretary/index");
 
 // Load environment variables from .env file
 require('dotenv').config();
