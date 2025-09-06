@@ -280,7 +280,7 @@ async function getDetailedThesisInfo(req) {
 }
 
 // Function to get committee status
-async function getCommitteeStatus(req) {
+async function getCommitteeStatus(thesisId) {
   const sql = `
     SELECT
       ci.id,
@@ -296,7 +296,8 @@ async function getCommitteeStatus(req) {
     ORDER BY ci.sent_at DESC
   `;
 
-  const params = [req.thesisId];
+  const params = [thesisId];
+  console.log(sql, params)
   const conn = await pool.getConnection();
   try {
     const rows = await conn.query(sql, params);

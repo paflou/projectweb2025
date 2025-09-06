@@ -59,38 +59,46 @@ async function handleThesisUpload(req, userId) {
         });
     });
 }
-
 async function handleFileUpload(req) {
-    const form = new formidable.IncomingForm();
-    const fsPromises = fs.promises;
-    const uploadDir = path.join(process.cwd(), 'uploads/theses_descriptions');
-    if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    form.keepExtensions = true;
+  const fsPromises = fs.promises;
+  const uploadDir = path.join(process.cwd(), 'uploads/theses_descriptions');
 
-    return new Promise((resolve, reject) => {
-        form.parse(req, async (err, fields, files) => {
-            if (err) return reject(err);
-            let safeName;
-            const file = Array.isArray(files.pdf) ? files.pdf[0] : files.pdf;
-            if (file) {
-                const oldPath = file.filepath;
-                safeName = path.basename(file.originalFilename);
-                const newPath = path.join(uploadDir, safeName);
-                try {
-                    await fsPromises.copyFile(oldPath, newPath);
-                    await fsPromises.unlink(oldPath);
-                } catch (error) {
-                    return reject(error);
-                }
-            } else {
-                safeName = 'NULL';
-            }
-            resolve({ fields, safeName });
-        });
+  // Ensure the upload directory exists
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
+  const form = new formidable.IncomingForm();
+  form.keepExtensions = true;
+  form.allowEmptyFiles = true; // allow empty file uploads
+  form.minFileSize = 0;
+
+  return new Promise((resolve, reject) => {
+    form.parse(req, async (err, fields, files) => {
+      if (err) return reject(err);
+
+      let safeName = 'NULL';
+      const file = Array.isArray(files.pdf) ? files.pdf[0] : files.pdf;
+
+      if (file && file.size > 0) {
+        try {
+          const oldPath = file.filepath;
+
+          safeName = path.basename(file.originalFilename);
+          const newPath = path.join(uploadDir, safeName);
+
+          await fsPromises.copyFile(oldPath, newPath);
+          await fsPromises.unlink(oldPath); // cleanup temp file
+        } catch (error) {
+          return reject(error);
+        }
+      }
+
+      resolve({ fields, safeName });
     });
+  });
 }
+
 
 module.exports = {
     handleThesisUpload,
