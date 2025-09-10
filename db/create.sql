@@ -75,7 +75,15 @@ CREATE TABLE IF NOT EXISTS thesis (
     
     -- Grade between 0 and 10, with two decimal places
     grade DECIMAL(4, 2) CHECK (grade >= 0 AND grade <= 10),
-    
+
+    -- Secretary management fields
+    ap_number VARCHAR(50), -- AP number from General Assembly for topic assignment approval
+    ap_year YEAR, -- Year of the General Assembly decision
+    cancellation_ap_number VARCHAR(50), -- AP number for cancellation decision
+    cancellation_ap_year YEAR, -- Year of cancellation decision
+    cancellation_reason TEXT, -- Reason for cancellation (free text)
+    cancellation_date TIMESTAMP NULL, -- Date when cancellation was recorded
+
     PRIMARY KEY (id),
     
     -- Foreign keys

@@ -1,0 +1,20 @@
+{
+  "students": [
+    {
+      "name": "Τεστ",
+      "surname": "Φοιτητής",
+      "student_number": "10999001",
+      "email": "test@upnet.gr"
+    }
+  ],
+  "professors": [
+    {
+      "name": "Τεστ",
+      "surname": "Καθηγητής",
+      "email": "test@ceid.upatras.gr",
+      "topic": "Τεστ Αντικείμενο",
+      "department": "CEID",
+      "university": "Πανεπιστήμιο Πατρών"
+    }
+  ]
+}

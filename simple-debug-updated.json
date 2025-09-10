@@ -1,0 +1,33 @@
+{
+  "students": [
+    {
+      "name": "Τεστ",
+      "surname": "Φοιτητής",
+      "student_number": "10999001",
+      "email": "test.student@upnet.gr",
+      "username": "test_student",
+      "password": "123",
+      "street": "Τεστ Οδός",
+      "number": "1",
+      "city": "Πάτρα",
+      "postcode": "26441",
+      "father_name": "Τεστ Πατέρας",
+      "landline_telephone": "2610000001",
+      "mobile_telephone": "6900000001"
+    }
+  ],
+  "professors": [
+    {
+      "name": "Τεστ",
+      "surname": "Καθηγητής",
+      "email": "test.professor@ceid.upatras.gr",
+      "username": "test_professor",
+      "password": "123",
+      "topic": "Τεστ Αντικείμενο",
+      "department": "CEID",
+      "university": "Πανεπιστήμιο Πατρών",
+      "landline": "2610000002",
+      "mobile": "6900000002"
+    }
+  ]
+}
