@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
-    "dev": "nodemon ./bin/www",
+    "dev": "nodemon --ignore uploads/ --ignore *.json ./bin/www",
     "dev-stable": "nodemon --ignore uploads/ --ignore *.json ./bin/www",
     "seed": "node ./db/seedDatabase.js"
   },
