@@ -43,12 +43,23 @@ const assemblyYearField = document.getElementById('assemblyYear');
 const assemblyNumberField = document.getElementById('assemblyNumber');
 
 
+const openGradeModalBtn = document.getElementById('openGradeModalBtn');
+const gradeModalEl = document.getElementById('gradeModal');
+const gradeModal = new bootstrap.Modal(gradeModalEl);
+
+
 const thesisId = window.location.pathname.split('/').pop();
 
 
 // === Page Initialization ===
 document.addEventListener('DOMContentLoaded', async () => {
     await initializePage();
+});
+
+openGradeModalBtn.addEventListener('click', () => {
+    gradeModal.show();
+    document.getElementById('gradeForm').reset();
+    document.getElementById('totalGrade').value = '';
 });
 
 async function initializePage() {
@@ -135,13 +146,14 @@ async function renderSections(thesis) {
             activeThesisSection.classList.remove('d-none');
             populateNoteField();
             if (role === 'supervisor')
-                setUpSupervisorActions(thesisId);
+                setUpSupervisorActionsForActiveThesis(thesisId);
             break;
         case 'under-review':
             underReviewSection.classList.remove('d-none');
+            gradingSection.classList.remove('d-none');
+
             break;
         case 'completed':
-            gradingSection.classList.remove('d-none');
             break;
     }
 }
@@ -178,7 +190,7 @@ function setupEventListeners(thesis) {
     // TODO: Add listeners for notes, grading, under-review actions here
 }
 
-async function setUpSupervisorActions(thesisId) {
+async function setUpSupervisorActionsForActiveThesis(thesisId) {
     try {
         console.log("getting assignment date")
         // Get thesis assignment date
@@ -497,7 +509,6 @@ async function checkRole(thesisId) {
         alert("Υπήρξε σφάλμα.");
     }
 }
-
 
 // === Utility Functions ===
 function getStatusText(status) {
