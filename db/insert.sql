@@ -319,32 +319,30 @@ INSERT INTO professor (id, topic, department, university) VALUES
 -- ================================
 -- Thesis examples (one per status)
 -- ================================
-INSERT INTO thesis (id, title, description, student_id, supervisor_id, member1_id, member2_id, thesis_status) VALUES
+INSERT INTO thesis (id, title, description, supervisor_id, member1_id, member2_id, thesis_status) VALUES
 -- under-assignment (only 1 member is OK)
-(1, 'Edge Computing for IoT', 'Optimizing IoT devices with edge computing.', 10000, 101, 103, NULL, 'under-assignment'),
+(1, 'Edge Computing for IoT', 'Optimizing IoT devices with edge computing.', 101, 103, NULL, 'under-assignment'),
 
 -- active (2 members required)
-(2, 'Smart Agriculture Sensors', 'IoT-based monitoring for precision farming.', 10001, 102, 101, 146, 'active'),
+(2, 'Smart Agriculture Sensors', 'IoT-based monitoring for precision farming.', 102, 101, 146, 'active'),
 
 -- under-review (2 members required)
-(3, 'AI in Cybersecurity', 'AI-driven threat detection and prevention systems.', 10002, 103, 101, 146, 'under-review'),
+(3, 'AI in Cybersecurity', 'AI-driven threat detection and prevention systems.', 103, 101, 146, 'under-review'),
 
 -- canceled (2 members required)
-(4, 'Blockchain in Supply Chain', 'Enhancing transparency using blockchain.', 10004, 101, 103, 146, 'canceled'),
+(4, 'Blockchain in Supply Chain', 'Enhancing transparency using blockchain.', 101, 103, 146, 'canceled'),
 
+-- another under-assignment example
+(6, 'Testing', 'Enhancing transparency using blockchain.', 146, 103, NULL, 'under-assignment');
 
-(6, 'Testing', 'Enhancing transparency using blockchain.', 10006, 146, 103, NULL, 'under-assignment');
-
-
+-- completed thesis with all fields but without student_id
 INSERT INTO thesis (
-    id, title, description, student_id, supervisor_id, member1_id, member2_id, thesis_status,
+    id, title, description, supervisor_id, member1_id, member2_id, thesis_status,
     pdf, draft, exam_datetime, exam_mode, exam_location, final_repository_link, submission_date, grade
 ) VALUES
--- completed thesis with all fields
 (5,
  'Machine Learning in Healthcare',
  'Improving diagnostics with ML algorithms.',
- 10003,
  146,   -- supervisor_id
  102,   -- member1_id
  103,   -- member2_id
@@ -357,286 +355,15 @@ INSERT INTO thesis (
  'https://nemertes.library.upatras.gr/repo/ml_healthcare',  -- final_repository_link
  '2024-01-15 09:00:00',               -- submission_date (older date for realistic completion time)
  9.25                                  -- grade
-),
-
--- Additional completed theses for Professor 101 (as supervisor)
-(6,
- 'Deep Learning for Image Recognition',
- 'Advanced neural networks for computer vision applications.',
- 10005,
- 101,   -- supervisor_id (Professor 101)
- 102,   -- member1_id
- 103,   -- member2_id
- 'completed',
- 'deep_learning_supervisor.pdf',
- 'deep_learning_student_draft.pdf',
- '2024-12-10 14:00:00',               -- exam_datetime
- 'in-person',
- 'Room 105, CS Building',
- 'https://nemertes.library.upatras.gr/repo/deep_learning',
- '2024-02-20 10:30:00',               -- submission_date
- 8.75                                  -- grade
-),
-
-(7,
- 'Blockchain Technology in Finance',
- 'Implementing secure financial transactions using blockchain.',
- 10006,
- 101,   -- supervisor_id (Professor 101)
- 146,   -- member1_id
- 102,   -- member2_id
- 'completed',
- 'blockchain_finance_supervisor.pdf',
- 'blockchain_finance_student_draft.pdf',
- '2024-11-25 10:00:00',               -- exam_datetime
- 'online',
- 'Zoom Meeting Room',
- 'https://nemertes.library.upatras.gr/repo/blockchain_finance',
- '2024-03-10 11:15:00',               -- submission_date
- 9.50                                  -- grade
-),
-
-(8,
- 'IoT Security Protocols',
- 'Developing secure communication protocols for IoT devices.',
- 10007,
- 101,   -- supervisor_id (Professor 101)
- 103,   -- member1_id
- 146,   -- member2_id
- 'completed',
- 'iot_security_supervisor.pdf',
- 'iot_security_student_draft.pdf',
- '2024-10-15 15:30:00',               -- exam_datetime
- 'in-person',
- 'Room 201, CS Building',
- 'https://nemertes.library.upatras.gr/repo/iot_security',
- '2024-01-05 08:45:00',               -- submission_date
- 8.25                                  -- grade
-),
-
--- Completed theses where Professor 101 is committee member
-(9,
- 'Natural Language Processing for Greek',
- 'Advanced NLP techniques for Greek language processing.',
- 10008,
- 102,   -- supervisor_id (Professor 102)
- 101,   -- member1_id (Professor 101 as committee member)
- 103,   -- member2_id
- 'completed',
- 'nlp_greek_supervisor.pdf',
- 'nlp_greek_student_draft.pdf',
- '2024-12-05 11:00:00',               -- exam_datetime
- 'in-person',
- 'Room 301, CS Building',
- 'https://nemertes.library.upatras.gr/repo/nlp_greek',
- '2024-04-01 09:20:00',               -- submission_date
- 9.00                                  -- grade
-),
-
-(10,
- 'Quantum Computing Algorithms',
- 'Implementing quantum algorithms for optimization problems.',
- 10009,
- 103,   -- supervisor_id (Professor 103)
- 101,   -- member1_id (Professor 101 as committee member)
- 146,   -- member2_id
- 'completed',
- 'quantum_computing_supervisor.pdf',
- 'quantum_computing_student_draft.pdf',
- '2024-11-20 13:00:00',               -- exam_datetime
- 'online',
- 'Microsoft Teams',
- 'https://nemertes.library.upatras.gr/repo/quantum_computing',
- '2024-05-15 14:30:00',               -- submission_date
- 8.50                                  -- grade
-),
-
--- More theses for comprehensive statistics (Professor 101 as supervisor)
-(11,
- 'Cybersecurity in Cloud Computing',
- 'Advanced security measures for cloud-based applications.',
- 10010,
- 101,   -- supervisor_id (Professor 101)
- 102,   -- member1_id
- 146,   -- member2_id
- 'under-review',
- 'cybersecurity_cloud_supervisor.pdf',
- 'cybersecurity_cloud_student_draft.pdf',
- NULL,                                 -- exam_datetime (not yet scheduled)
- NULL,                                 -- exam_mode
- NULL,                                 -- exam_location
- NULL,                                 -- final_repository_link
- '2024-06-01 10:00:00',               -- submission_date
- NULL                                  -- grade (not yet graded)
-),
-
-(12,
- 'Mobile App Development with React Native',
- 'Cross-platform mobile application development.',
- 10011,
- 101,   -- supervisor_id (Professor 101)
- 103,   -- member1_id
- 146,   -- member2_id
- 'active',
- 'mobile_app_supervisor.pdf',
- NULL,                                 -- draft (not yet submitted)
- NULL,                                 -- exam_datetime
- NULL,                                 -- exam_mode
- NULL,                                 -- exam_location
- NULL,                                 -- final_repository_link
- '2024-07-15 09:30:00',               -- submission_date
- NULL                                  -- grade
-),
-
--- Theses where Professor 101 is committee member
-(13,
- 'Artificial Intelligence in Education',
- 'AI-powered personalized learning systems.',
- 10012,
- 102,   -- supervisor_id (Professor 102)
- 101,   -- member1_id (Professor 101 as committee member)
- 103,   -- member2_id
- 'completed',
- 'ai_education_supervisor.pdf',
- 'ai_education_student_draft.pdf',
- '2024-09-20 16:00:00',               -- exam_datetime
- 'in-person',
- 'Room 401, CS Building',
- 'https://nemertes.library.upatras.gr/repo/ai_education',
- '2024-02-10 11:45:00',               -- submission_date
- 9.75                                  -- grade
-),
-
-(14,
- 'Data Mining Techniques',
- 'Advanced algorithms for big data analysis.',
- 10013,
- 103,   -- supervisor_id (Professor 103)
- 101,   -- member1_id (Professor 101 as committee member)
- 102,   -- member2_id
- 'completed',
- 'data_mining_supervisor.pdf',
- 'data_mining_student_draft.pdf',
- '2024-08-30 14:30:00',               -- exam_datetime
- 'online',
- 'Google Meet',
- 'https://nemertes.library.upatras.gr/repo/data_mining',
- '2024-03-25 13:20:00',               -- submission_date
- 8.00                                  -- grade
-),
-
--- Additional theses for Professor 102 (as supervisor) to show variety
-(15,
- 'Web Development with Modern Frameworks',
- 'Building scalable web applications using Vue.js and Node.js.',
- 10014,
- 102,   -- supervisor_id (Professor 102)
- 101,   -- member1_id
- 103,   -- member2_id
- 'completed',
- 'web_development_supervisor.pdf',
- 'web_development_student_draft.pdf',
- '2024-07-10 10:30:00',               -- exam_datetime
- 'in-person',
- 'Room 102, CS Building',
- 'https://nemertes.library.upatras.gr/repo/web_development',
- '2024-01-20 08:15:00',               -- submission_date
- 7.50                                  -- grade
 );
 
--- =========================================
--- Additional theses for presentation announcements demo
--- =========================================
+UPDATE thesis SET student_id = 10000 WHERE id = 1; -- under-assignment
+UPDATE thesis SET student_id = 10001 WHERE id = 2; -- active
+UPDATE thesis SET student_id = 10002 WHERE id = 3; -- under-review
+UPDATE thesis SET student_id = 10004 WHERE id = 4; -- canceled
+UPDATE thesis SET student_id = 10003 WHERE id = 5; -- completed
+UPDATE thesis SET student_id = 10006 WHERE id = 6; -- under-assignment
 
--- Upcoming presentations (active and under-review theses with scheduled exams)
-INSERT INTO thesis (
-    id, title, description, student_id, supervisor_id, member1_id, member2_id, thesis_status,
-    pdf, draft, exam_datetime, exam_mode, exam_location, submission_date
-) VALUES
--- Active thesis with upcoming presentation
-(16,
- 'Blockchain Technology in Supply Chain Management',
- 'Implementation of blockchain solutions for transparent and secure supply chain tracking.',
- 10015,
- 103,   -- supervisor_id
- 101,   -- member1_id
- 102,   -- member2_id
- 'active',
- 'blockchain_supply_supervisor.pdf',
- 'blockchain_supply_student_draft.pdf',
- '2025-01-15 14:00:00',               -- upcoming exam
- 'in-person',
- 'Room 301, CS Building',
- '2024-08-15 09:30:00'
-),
-
--- Under-review thesis with upcoming presentation
-(17,
- 'Natural Language Processing for Greek Text Analysis',
- 'Advanced NLP techniques for processing and analyzing Greek language texts.',
- 10016,
- 104,   -- supervisor_id
- 102,   -- member1_id
- 105,   -- member2_id
- 'under-review',
- 'nlp_greek_supervisor.pdf',
- 'nlp_greek_student_draft.pdf',
- '2025-01-22 10:30:00',               -- upcoming exam
- 'online',
- 'Zoom Meeting Room',
- '2024-09-10 11:00:00'
-),
-
--- Active thesis with upcoming presentation
-(18,
- 'IoT-Based Smart Home Energy Management System',
- 'Development of an intelligent energy management system for smart homes using IoT devices.',
- 10017,
- 101,   -- supervisor_id
- 103,   -- member1_id
- 106,   -- member2_id
- 'active',
- 'iot_smart_home_supervisor.pdf',
- 'iot_smart_home_student_draft.pdf',
- '2025-02-05 16:00:00',               -- upcoming exam
- 'in-person',
- 'Room 205, CS Building',
- '2024-07-20 14:15:00'
-),
-
--- Under-review thesis with upcoming presentation
-(19,
- 'Machine Learning Approaches for Medical Image Segmentation',
- 'Comparative study of deep learning models for automated medical image segmentation.',
- 10018,
- 102,   -- supervisor_id
- 104,   -- member1_id
- 146,   -- member2_id
- 'under-review',
- 'ml_medical_imaging_supervisor.pdf',
- 'ml_medical_imaging_student_draft.pdf',
- '2025-02-12 09:00:00',               -- upcoming exam
- 'in-person',
- 'Room 401, Medical Building',
- '2024-08-30 10:45:00'
-),
-
--- Active thesis with upcoming presentation
-(20,
- 'Cybersecurity Framework for Small and Medium Enterprises',
- 'Design and implementation of a comprehensive cybersecurity framework tailored for SMEs.',
- 10019,
- 105,   -- supervisor_id
- 101,   -- member1_id
- 103,   -- member2_id
- 'active',
- 'cybersecurity_sme_supervisor.pdf',
- 'cybersecurity_sme_student_draft.pdf',
- '2025-02-18 13:30:00',               -- upcoming exam
- 'online',
- 'Microsoft Teams',
- '2024-09-05 16:20:00'
-);
 
 -- =========================================
 -- Matching committee invitations (aligned)

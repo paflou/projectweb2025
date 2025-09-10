@@ -23,6 +23,8 @@ const newNoteInput = document.getElementById('newNoteInput');
 const addNoteBtn = document.getElementById('addNoteBtn');
 const supervisorActionsActive = document.getElementById('supervisorActionsActive');
 const cancelAfter2YearsBtn = document.getElementById('cancelAfter2YearsBtn');
+const cancelAfter2YearsDesc = document.getElementById('cancelAfter2YearsDesc');
+
 const markAsUnderReviewBtn = document.getElementById('markAsUnderReviewBtn');
 
 const underReviewSection = document.getElementById('underReviewSection');
@@ -33,6 +35,13 @@ const generateAnnouncementBtn = document.getElementById('generateAnnouncementBtn
 const gradingSection = document.getElementById('gradingSection');
 const gradesTable = document.getElementById('gradesTable');
 const saveGradeBtn = document.getElementById('saveGradeBtn');
+
+
+const cancelAssignmentModal = document.getElementById('cancelAssignmentModal');
+const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+const assemblyYearField = document.getElementById('assemblyYear');
+const assemblyNumberField = document.getElementById('assemblyNumber');
+
 
 const thesisId = window.location.pathname.split('/').pop();
 
@@ -78,6 +87,11 @@ async function fetchNotes() {
     return await response.json();
 }
 
+async function fetchAssignmentDate() {
+    const response = await fetch(`/prof/get-assignment-date/${thesisId}`);
+    if (!response.ok) return [];
+    return await response.json();
+}
 
 // === DOM Rendering ===
 function hideLoading() {
@@ -91,10 +105,6 @@ function showNoThesisState() {
     thesisManagementCard.classList.add('d-none');
 }
 
-async function checkRole(thesisId){
-    
-}
-
 function renderThesisDetails(thesis) {
     thesisTitle.textContent = thesis.title;
     thesisDescription.textContent = thesis.description;
@@ -105,7 +115,10 @@ function renderThesisDetails(thesis) {
     thesisStatusBadge.textContent = getStatusText(thesis.status);
 }
 
-function renderSections(thesis) {
+async function renderSections(thesis) {
+    // Get professor role
+    const role = await checkRole(thesisId);
+
     // Hide all sections first
     pendingAssignmentSection.classList.add('d-none');
     activeThesisSection.classList.add('d-none');
@@ -121,6 +134,8 @@ function renderSections(thesis) {
         case 'active':
             activeThesisSection.classList.remove('d-none');
             populateNoteField();
+            if (role === 'supervisor')
+                setUpSupervisorActions(thesisId);
             break;
         case 'under-review':
             underReviewSection.classList.remove('d-none');
@@ -153,7 +168,6 @@ function setupEventListeners(thesis) {
     if (addNoteBtn) {
         addNoteBtn.addEventListener('click', addNewNote);
 
-        // Optional: allow Enter key to add note
         newNoteInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 addNewNote();
@@ -162,6 +176,117 @@ function setupEventListeners(thesis) {
     }
 
     // TODO: Add listeners for notes, grading, under-review actions here
+}
+
+async function setUpSupervisorActions(thesisId) {
+    try {
+        console.log("getting assignment date")
+        // Get thesis assignment date
+        const date = await fetchAssignmentDate(thesisId);
+
+        const assignmentDate = new Date(date);
+        console.log(assignmentDate)
+        const now = new Date();
+
+        // Check if 2 years have passed
+        const twoYearsLater = assignmentDate;
+        twoYearsLater.setFullYear(twoYearsLater.getFullYear() + 2);
+        if (now >= twoYearsLater) {
+            cancelAfter2YearsBtn.disabled = false; // Enable button
+            cancelAfter2YearsDesc.textContent = 'Μπορείτε να ακυρώσετε την ανάθεση.';
+
+        } else {
+            cancelAfter2YearsBtn.disabled = true;
+            const remaining = Math.ceil((twoYearsLater - now) / (1000 * 60 * 60 * 24));
+            cancelAfter2YearsDesc.textContent = `Η ακύρωση θα είναι διαθέσιμη σε ${remaining} ημέρες.`;
+        }
+
+    } catch (error) {
+        console.error(error);
+        cancelAfter2YearsDesc.textContent = 'Δεν ήταν δυνατή η φόρτωση της ημερομηνίας ανάθεσης.';
+    }
+
+    // Show the modal when the button is clicked
+    cancelAfter2YearsBtn.addEventListener('click', () => {
+        const modal = bootstrap.Modal.getOrCreateInstance(cancelAssignmentModal);
+        modal.show();
+    });
+
+    // Reset modal content whenever it opens
+    cancelAssignmentModal.addEventListener('show.bs.modal', () => {
+        const form = cancelAssignmentModal.querySelector('#cancelAssignmentForm'); // note the #
+        if (form) form.reset(); // clear inputs
+
+        const statusText = cancelAssignmentModal.querySelector('#statusText');
+        if (statusText) {
+            statusText.innerText = '';
+            statusText.classList.add('d-none');
+            statusText.classList.remove('text-danger', 'text-success');
+        }
+    });
+
+    assemblyYear.addEventListener('input', () => {
+        const val = assemblyYear.value;
+        if (val.length > 4) assemblyYear.value = val.slice(0, 4);
+    });
+
+    confirmCancelBtn.addEventListener('click', async () => {
+        try {
+            const assemblyNumber = assemblyNumberField.value
+            const assemblyYear = assemblyYearField.value;
+
+            if (isNaN(assemblyYear) || assemblyYear < 1900 || assemblyYear > currentYear) {
+                showError('Εισάγετε ένα έτος από το 2000 έως το τρέχον έτος.');
+                return;
+            }
+
+            //console.log(assemblyNumber)
+            //console.log(assemblyYear)
+
+            const res = await fetch(`/prof/cancel-active-assignment/${thesisId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assemblyNumber, assemblyYear })
+            });
+            const response = await res.json();
+            if (res.ok) showSuccess("Η ανάθεση ακυρώθηκε επιτυχώς");
+            else showError(`Σφάλμα: ${response.error}`);
+        } catch (err) {
+            console.error(err);
+            showError("Παρουσιάστηκε σφάλμα κατά την ακύρωση.");
+        }
+    });
+
+    // 4. Mark as under review button
+    markAsUnderReviewBtn.addEventListener('click', async () => {
+        if (!confirm("Μεταφορά σε Υπό Εξέταση;")) return;
+        try {
+            const res = await fetch(`/prof/mark-under-review/${thesisId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const result = await res.json();
+
+            if (res.ok) showSuccess("Η κατάσταση της διπλωματικής ενημερώθηκε επιτυχώς σε Υπό Εξέταση.");
+            else showError(`Σφάλμα: ${result.error}`);
+        } catch (err) {
+            console.error(err);
+            alert("Παρουσιάστηκε σφάλμα κατά την αλλαγή κατάστασης.");
+        }
+    });
+    supervisorActionsActive.classList.remove('d-none');
+
+
+    const successModalEl = document.getElementById('successModal');
+    const errorModalEl = document.getElementById('errorModal');
+
+    successModalEl.addEventListener('hidden.bs.modal', () => {
+        location.reload(); // refresh the page when modal is fully hidden
+    });
+
+    errorModalEl.addEventListener('hidden.bs.modal', () => {
+        location.reload(); // refresh the page when modal is fully hidden
+    });
 }
 
 
@@ -218,7 +343,7 @@ async function populateNoteField() {
     const notes = await fetchNotes();
     notesList.innerHTML = '';
 
-    if (!notes || notes.length === 0) {
+    if (!notes || notes.length === 0 || !Array.isArray(notes)) {
         notesList.innerHTML = `<p class="text-muted mb-0">Δεν υπάρχουν σημειώσεις.</p>`;
         return;
     }
@@ -351,6 +476,28 @@ async function addNewNote() {
     }
 }
 
+async function checkRole(thesisId) {
+    try {
+        const response = await fetch(`/prof/check-professor-role/${thesisId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        }
+
+        return data.role;
+    } catch (err) {
+        console.error("Error finding professor role:", err);
+        alert("Υπήρξε σφάλμα.");
+    }
+}
+
 
 // === Utility Functions ===
 function getStatusText(status) {
@@ -373,10 +520,3 @@ function getStatusBadge(status) {
     return badgeMap[status] || `<span class="badge bg-secondary">${status}</span>`;
 }
 
-// Placeholder for modal success
-function showSuccess(message) {
-    const modalBody = document.querySelector('#successModal .modal-body');
-    if (modalBody) modalBody.textContent = message;
-    const modal = new bootstrap.Modal(document.getElementById('successModal'));
-    modal.show();
-}
