@@ -330,7 +330,11 @@ INSERT INTO thesis (id, title, description, student_id, supervisor_id, member1_i
 (3, 'AI in Cybersecurity', 'AI-driven threat detection and prevention systems.', 10002, 103, 101, 146, 'under-review'),
 
 -- canceled (2 members required)
-(4, 'Blockchain in Supply Chain', 'Enhancing transparency using blockchain.', 10004, 101, 103, 146, 'canceled');
+(4, 'Blockchain in Supply Chain', 'Enhancing transparency using blockchain.', 10004, 101, 103, 146, 'canceled'),
+
+
+(6, 'Testing', 'Enhancing transparency using blockchain.', 10006, 146, 103, NULL, 'under-assignment');
+
 
 INSERT INTO thesis (
     id, title, description, student_id, supervisor_id, member1_id, member2_id, thesis_status,
@@ -637,22 +641,22 @@ INSERT INTO thesis (
 -- =========================================
 -- Matching committee invitations (aligned)
 -- =========================================
-INSERT INTO committee_invitation (thesis_id, professor_id, status) VALUES
+INSERT INTO committee_invitation (thesis_id, professor_id, status, sent_at, replied_at) VALUES
 -- Thesis 1: under-assignment (only member1=103 is fixed, others may still be pending)
-(1, 102, 'pending'),
-(1, 103, 'accepted'),
+(1, 102, 'pending',  '2025-09-01 10:00:00', NULL),
+(1, 103, 'accepted', '2025-09-01 10:00:00', '2025-09-02 09:30:00'),
 
 -- Thesis 2: active (members 101 and 146 → must be accepted)
-(2, 101, 'accepted'),
-(2, 146, 'accepted'),
+(2, 101, 'accepted', '2025-09-01 11:00:00', '2025-09-01 15:45:00'),
+(2, 146, 'accepted', '2025-09-01 11:00:00', '2025-09-01 16:10:00'),
 
 -- Thesis 3: under-review (members 101 and 146 → must be accepted)
-(3, 101, 'accepted'),
-(3, 146, 'accepted'),
+(3, 101, 'accepted', '2025-09-02 12:15:00', '2025-09-02 13:45:00'),
+(3, 146, 'accepted', '2025-09-02 12:15:00', '2025-09-02 14:05:00'),
 
 -- Thesis 4: completed (members 102 and 103 → must be accepted)
-(4, 102, 'accepted'),
-(4, 103, 'accepted'),
+(4, 102, 'accepted', '2025-08-30 09:00:00', '2025-08-30 10:30:00'),
+(4, 103, 'accepted', '2025-08-30 09:00:00', '2025-08-30 11:00:00'),
 
 -- Thesis 5: completed (members 102 and 103 → must be accepted)
 (5, 102, 'accepted'),
@@ -719,3 +723,7 @@ INSERT INTO committee_invitation (thesis_id, professor_id, status) VALUES
 -- Thesis 20: active (members 101 and 103 → must be accepted)
 (20, 101, 'accepted'),
 (20, 103, 'accepted');
+
+-- Thesis 5: canceled (members 103 and 146 → must be accepted)
+(6, 103, 'accepted', '2025-08-29 14:20:00', '2025-08-29 15:15:00'),
+(6, 101, 'pending', '2025-08-29 14:20:00', NULL);

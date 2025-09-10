@@ -103,6 +103,30 @@ CREATE TABLE IF NOT EXISTS thesis_log (
     CONSTRAINT log_user_fk FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
 );
 
+CREATE TABLE
+    IF NOT EXISTS committee_invitation (
+        id INT AUTO_INCREMENT,
+        thesis_id INT NOT NULL,
+        professor_id INT NOT NULL,
+        status ENUM ('pending', 'accepted', 'rejected') DEFAULT 'pending',
+        sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        replied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+        PRIMARY KEY (id),
+        CONSTRAINT invitation_thesis FOREIGN KEY (thesis_id) REFERENCES thesis (id) ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT invitation_professor FOREIGN KEY (professor_id) REFERENCES professor (id) ON DELETE CASCADE ON UPDATE CASCADE
+    );
+
+CREATE TABLE IF NOT EXISTS professor_notes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    thesis_id INT NOT NULL,
+    professor_id INT,
+    note VARCHAR(300),
+    
+    CONSTRAINT professor_fk FOREIGN KEY (professor_id) REFERENCES professor(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT thesis_fk FOREIGN KEY (thesis_id) REFERENCES thesis(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 CREATE TRIGGER log_thesis_creation
 AFTER INSERT ON thesis
 FOR EACH ROW
@@ -135,18 +159,6 @@ BEGIN
         SET action_type = 'assignment_cancelled';
         SET user_role = 'supervisor';
         SET user_id = NEW.supervisor_id;
-
-    -- Committee member 1 accepted invitation
-    ELSEIF OLD.member1_id IS NULL AND NEW.member1_id IS NOT NULL THEN
-        SET action_type = 'invitation_accepted';
-        SET user_role = 'member';
-        SET user_id = NEW.member1_id;
-
-    -- Committee member 2 accepted invitation
-    ELSEIF OLD.member2_id IS NULL AND NEW.member2_id IS NOT NULL THEN
-        SET action_type = 'invitation_accepted';
-        SET user_role = 'member';
-        SET user_id = NEW.member2_id;
 
     -- Committee member 1 left
     ELSEIF OLD.member1_id IS NOT NULL AND NEW.member1_id IS NULL THEN
@@ -200,17 +212,30 @@ BEGIN
     END IF;
 END;
 
-CREATE TABLE
-    IF NOT EXISTS committee_invitation (
-        id INT AUTO_INCREMENT,
-        thesis_id INT NOT NULL,
-        professor_id INT NOT NULL,
-        status ENUM ('pending', 'accepted', 'rejected') DEFAULT 'pending',
-        sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (id),
-        CONSTRAINT invitation_thesis FOREIGN KEY (thesis_id) REFERENCES thesis (id) ON DELETE CASCADE ON UPDATE CASCADE,
-        CONSTRAINT invitation_professor FOREIGN KEY (professor_id) REFERENCES professor (id) ON DELETE CASCADE ON UPDATE CASCADE
-    );
+
+CREATE TRIGGER log_invitation_sent
+AFTER INSERT ON committee_invitation
+FOR EACH ROW
+BEGIN
+    INSERT INTO thesis_log (thesis_id, user_id, user_role, action)
+    VALUES (NEW.thesis_id, NEW.professor_id, 'student', 'invitation_sents');
+END;
+
+CREATE TRIGGER log_invitation_status_change
+AFTER UPDATE ON committee_invitation
+FOR EACH ROW
+BEGIN
+    -- Only act if the status has actually changed
+    IF NEW.status <> OLD.status THEN
+        IF NEW.status = 'accepted' THEN
+            INSERT INTO thesis_log (thesis_id, user_id, user_role, action)
+            VALUES (NEW.thesis_id, NEW.professor_id, 'member', 'Invitation_accepted');
+        ELSEIF NEW.status = 'rejected' THEN
+            INSERT INTO thesis_log (thesis_id, user_id, user_role, action)
+            VALUES (NEW.thesis_id, NEW.professor_id, 'member', 'Invitation_declined');
+        END IF;
+    END IF;
+END;
 
 -- Trigger to update thesis status and cancel pending invitations when two committee members accept
 CREATE TRIGGER update_thesis_status_on_acceptance

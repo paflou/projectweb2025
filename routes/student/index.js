@@ -13,6 +13,7 @@ const profileRoutes = require("./profileRoutes");
 router.use(profileRoutes);
 router.use(invitationRoutes);
 router.use(thesisRoutes);
+
 // Route: GET /student
 // Serve the main student page
 router.get("/", checkPermission('student'), (req, res) => {

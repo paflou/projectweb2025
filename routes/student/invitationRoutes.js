@@ -13,9 +13,9 @@ const checkPermission = require("../../middlewares/checkPermission");
 
 // Route: GET /student/committee-status
 // Get committee members and pending invitations
-router.get('/committee-status', checkPermission('student'), async (req, res) => {
+router.get('/committee-status/:id', checkPermission('student'), async (req, res) => {
   try {
-    const status = await getCommitteeStatus(req);
+    const status = await getCommitteeStatus( req.params.id);
     res.setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify(status, (_, v) =>
       typeof v === 'bigint' ? v.toString() : v

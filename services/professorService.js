@@ -368,16 +368,16 @@ async function cancelThesisAssignment(req, thesisId) {
       FROM thesis
       WHERE id = ? AND supervisor_id = ? AND thesis_status = 'under-assignment'
     `;
-    const thesisRow = await conn.query(checkThesisSql, [thesisId, req.session.userId]);
-    console.log('DEBUG checkThesisSql result:', thesisRow);
+    const thesisRows = await conn.query(checkThesisSql, [thesisId, req.session.userId]);
+    console.log('DEBUG checkThesisSql result:', thesisRows);
 
-    if (!thesisRow) {
+    if (!thesisRows || thesisRows.length === 0) {
       await conn.rollback();
       conn.release();
       return { success: false, error: 'Thesis not found or not available for cancellation' };
     }
 
-    if (thesisRow.student_id === null) {
+    if (thesisRows.student_id === null) {
       await conn.rollback();
       conn.release();
       return { success: false, error: 'Thesis is not currently assigned to any student' };
@@ -725,6 +725,167 @@ async function deleteThesis(thesisId, supervisorId) {
   }
 }
 
+async function getSpecificThesis(thesisId, professorId) {
+  const sql = `
+    SELECT
+      t.id,
+      t.title,
+      t.description,
+      t.pdf,
+      t.thesis_status AS status,
+      t.final_repository_link,
+      CONCAT(s.name, ' ', s.surname) AS student_name,
+      CONCAT(p.name, ' ', p.surname) AS supervisor_name,
+      CONCAT(c1.name, ' ', c1.surname) AS member1_name,
+      CONCAT(c2.name, ' ', c2.surname) AS member2_name,
+      CASE
+          WHEN t.supervisor_id = ? THEN 'supervisor'
+          WHEN t.member1_id = ? OR member2_id = ? THEN 'committee'
+          WHEN t.student_id = ? THEN 'student'
+          ELSE 'unknown'
+      END AS user_role
+  FROM thesis AS t
+  LEFT JOIN user AS s ON t.student_id = s.id
+  LEFT JOIN user AS c1 ON t.member1_id = c1.id
+  LEFT JOIN user AS c2 ON t.member2_id = c2.id
+  LEFT JOIN user AS p ON t.supervisor_id = p.id
+  WHERE t.id = ? AND ? IN (supervisor_id, member1_id, member2_id, student_id);
+  `;
+
+
+  const params = [professorId, professorId, professorId, professorId, thesisId, professorId];
+  // Get a connection from the pool
+  const conn = await pool.getConnection();
+  try {
+    // Execute the query
+    const rows = await conn.query(sql, params);
+    conn.release();
+
+    // Return the first row if found, otherwise null
+    if (rows.length > 0) {
+      //console.log(rows)
+      return rows[0];
+    } else {
+      return null;
+    }
+  } catch (err) {
+    // Release the connection and propagate the error
+    conn.release();
+    throw err;
+  }
+}
+
+async function getThesisInvitations(thesisId) {
+  const sql =
+    `
+SELECT 
+    CONCAT(u.name, ' ', u.surname) AS professor_name,
+    c.status,
+    c.sent_at,
+    c.replied_at
+FROM committee_invitation AS c
+INNER JOIN user AS u ON u.id = c.professor_id
+WHERE c.thesis_id = ?
+ORDER BY c.sent_at DESC;
+
+  `
+  const params = [thesisId];
+
+  const conn = await pool.getConnection();
+  try {
+    const result = await conn.query(sql, params); // Destructure result
+    console.log(result)
+    return result;
+  } finally {
+    conn.release();
+  }
+}
+
+async function getProfessorNotesForThesis(professorId, thesisId) {
+  const sql =
+    `
+SELECT 
+    id, note
+    FROM professor_notes
+    WHERE thesis_id = ? AND professor_id = ?;
+  `
+  const params = [thesisId, professorId];
+
+  const conn = await pool.getConnection();
+  try {
+    const result = await conn.query(sql, params); // Destructure result
+    console.log(result)
+    return result;
+  } finally {
+    conn.release();
+  }
+}
+
+async function addNoteForThesis(professorId, thesisId, text) {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+
+    const sql = `
+      INSERT INTO professor_notes (thesis_id, professor_id, note)
+      VALUES (?, ?, ?)
+    `;
+    const params = [thesisId, professorId, text.trim()];
+
+    await conn.query(sql, params);
+
+    return { success: true };
+  } catch (err) {
+    console.error('Error in addNoteForThesis:', err);
+    return { success: false, error: 'Database error' };
+  } finally {
+    if (conn) conn.release();
+  }
+}
+
+async function editNote(noteId, professorId, text) {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const sql = `
+            UPDATE professor_notes
+            SET note = ?
+            WHERE id = ? AND professor_id = ?
+        `;
+    const result = await conn.query(sql, [text.trim(), noteId, professorId]);
+    if (result.affectedRows === 0) {
+      return { success: false, error: 'Note not found or not allowed to edit.' };
+    }
+    return { success: true };
+  } catch (err) {
+    console.error('Error in editNote:', err);
+    return { success: false, error: 'Database error' };
+  } finally {
+    if (conn) conn.release();
+  }
+}
+
+async function deleteNote(noteId, professorId) {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const sql = `
+            DELETE FROM professor_notes
+            WHERE id = ? AND professor_id = ?
+        `;
+    const result = await conn.query(sql, [noteId, professorId]);
+    if (result.affectedRows === 0) {
+      return { success: false, error: 'Note not found or not allowed to delete.' };
+    }
+    return { success: true };
+  } catch (err) {
+    console.error('Error in deleteNote:', err);
+    return { success: false, error: 'Database error' };
+  } finally {
+    if (conn) conn.release();
+  }
+}
+
 // Function to get statistics for instructor (both supervised and committee member theses)
 async function getInstructorStatistics(req) {
   const professorId = req.session.userId;
@@ -832,6 +993,12 @@ module.exports = {
   leaveComittee,
   getThesisTimeline,
   deleteThesis,
-  getInstructorStatistics
+  getInstructorStatistics,
+  getSpecificThesis,
+  getThesisInvitations,
+  getProfessorNotesForThesis,
+  addNoteForThesis,
+  editNote,
+  deleteNote
 };
 

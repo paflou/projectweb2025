@@ -49,7 +49,9 @@
                         <h4 id="thesisTitle" class="text-primary mb-2"></h4>
                         <p id="thesisDescription" class="text-muted mb-3"></p>
                         <p class="mb-1"><strong>Φοιτητής/τρια:</strong> <span id="studentName"></span></p>
-                        <p class="mb-0"><strong>Επιβλέπων:</strong> <span id="supervisorName"></span></p>
+                        <p class="mb-1"><strong>Επιβλέπων:</strong> <span id="supervisorName"></span></p>
+                        <p class="mb-1"><strong>Μέλος 1:</strong> <span id="member1Name"></span></p>
+                        <p class="mb-0"><strong>Μέλος 2:</strong> <span id="member2Name"></span></p>
                     </div>
                 </div>
 
@@ -69,8 +71,7 @@
                                     <tr>
                                         <th>Όνομα</th>
                                         <th>Ημερομηνία Πρόσκλησης</th>
-                                        <th>Ημερομηνία Αποδοχής</th>
-                                        <th>Ημερομηνία Απόρριψης</th>
+                                        <th>Ημερομηνία Απάντησης</th>
                                         <th>Κατάσταση</th>
                                     </tr>
                                 </thead>
@@ -203,9 +204,11 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous">
-    </script>
+        </script>
     <script src="/js/loadPartials.js"></script>
-    <script src="/js/manageThesis.js"></script>
+    <script src="/js/professorManageThesis.js"></script>
+    <script src="/js/getStatusBadge.js"></script>
+    <script src="/js/errorOrSuccessModal.js"></script>
 </body>
 
 </html>

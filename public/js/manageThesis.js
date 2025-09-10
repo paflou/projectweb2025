@@ -69,8 +69,9 @@ let selectedProfessor = null;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function () {
-    initializeEventListeners();
     loadThesisInfo();
+
+    initializeEventListeners();
     getRepositoryLink();
 });
 
@@ -203,7 +204,7 @@ async function loadThesisInfo() {
         }
 
         const data = await response.json();
-
+        console.log(data)
         hideLoadingState();
 
         if (!data.thesis) {
@@ -280,7 +281,7 @@ function showStatusSection(status) {
 // Load committee status
 async function loadCommitteeStatus() {
     try {
-        const response = await fetch('/student/committee-status', {
+        const response = await fetch(`/student/committee-status/${currentThesis.id}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -292,6 +293,7 @@ async function loadCommitteeStatus() {
         }
 
         const data = await response.json();
+        console.log(data)
         displayCommitteeStatus(data);
 
     } catch (error) {
