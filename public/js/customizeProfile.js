@@ -55,8 +55,8 @@ form.addEventListener('submit', async function (e) {
     e.preventDefault(); // prevent page reload
 
     // Send updated data to the server
-    const response = await fetch('/student/get-info', {
-        method: 'POST',
+    const response = await fetch('/student/put-info', {
+        method: 'PUT',
         headers: {
             'Content-Type': 'application/json'
         },

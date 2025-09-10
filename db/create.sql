@@ -218,7 +218,7 @@ AFTER INSERT ON committee_invitation
 FOR EACH ROW
 BEGIN
     INSERT INTO thesis_log (thesis_id, user_id, user_role, action)
-    VALUES (NEW.thesis_id, NEW.professor_id, 'student', 'invitation_sents');
+    VALUES (NEW.thesis_id, NEW.professor_id, 'student', 'invitation_sent');
 END;
 
 CREATE TRIGGER log_invitation_status_change

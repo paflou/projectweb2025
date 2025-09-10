@@ -120,20 +120,27 @@
                             <h6 class="text-primary mb-3">
                                 <i class="bi bi-tools me-2"></i>Ενέργειες Επιβλέποντα
                             </h6>
-                            <div class="row g-2">
+                            <div class="row g-2 mt-3">
                                 <div class="col-md-6">
-                                    <button class="btn btn-outline-danger w-100" id="cancelAfter2YearsBtn">
+                                    <button class="btn btn-outline-danger w-100" id="cancelAfter2YearsBtn" type="button"
+                                        disabled>
                                         <i class="bi bi-x-octagon me-2"></i>
-                                        Ακύρωση Μετά από 2 Έτη
+                                        Ακύρωση
                                     </button>
+                                    <small id="cancelAfter2YearsDesc" class="text-muted d-block mt-1">
+                                        Η δυνατότητα ακύρωσης ενεργοποιείται 2 έτη μετά την οριστική ανάθεση.
+                                    </small>
                                 </div>
+
                                 <div class="col-md-6">
-                                    <button class="btn btn-outline-success w-100" id="markAsUnderReviewBtn">
+                                    <button class="btn btn-outline-success w-100" id="markAsUnderReviewBtn"
+                                        type="button">
                                         <i class="bi bi-check-circle me-2"></i>
                                         Μεταφορά σε Υπό Εξέταση
                                     </button>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 </div>
@@ -194,6 +201,66 @@
                                 <i class="bi bi-save me-2"></i>Αποθήκευση Βαθμού
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CANCEL ASSIGNMENT MODAL -->
+        <div class="modal-container">
+            <div class="modal fade" id="cancelAssignmentModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+
+                        <!-- Modal Header -->
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title">
+                                <i class="bi bi-x-octagon me-2"></i>Ακύρωση Ανάθεσης
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <!-- Modal Body -->
+                        <div class="modal-body">
+                            <p>
+                                Ως επιβλέπων/ουσα, μπορείτε να ακυρώσετε την ανάθεση διπλωματικής εργασίας
+                                <strong>εφόσον έχουν παρέλθει 2 έτη</strong> από την οριστική ανάθεση.
+                                Παρακαλώ καταχωρήστε τον αριθμό και το έτος της Γενικής Συνέλευσης στην οποία
+                                αποφασίστηκε η ακύρωση.
+                            </p>
+
+                            <form id="cancelAssignmentForm">
+                                <!-- General Assembly Number -->
+                                <div class="mb-3">
+                                    <label for="assemblyNumber" class="form-label">Αριθμός Γ.Σ.</label>
+                                    <input type="text" class="form-control" id="assemblyNumber" name="assemblyNumber"
+                                        placeholder="π.χ. 123 ή ΑΒΓ123" required>
+                                </div>
+
+                                <!-- General Assembly Year -->
+                                <div class="mb-3">
+                                    <label for="assemblyYear" class="form-label">Έτος Γ.Σ.</label>
+                                    <input type="number" class="form-control" id="assemblyYear" name="assemblyYear"
+                                        placeholder="π.χ. 2024" required min="1900" max="3000" step="1">
+                                </div>
+
+                                <!-- Warning -->
+                                <div class="alert alert-warning p-2">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    Αυτή η ενέργεια είναι μη αναστρέψιμη. Η κατάσταση της διπλωματικής θα αλλάξει σε
+                                    <strong>«Ακυρωμένη»</strong> και ο λόγος θα καταχωρηθεί ως «από Διδάσκοντα».
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Modal Footer -->
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Άκυρο</button>
+                            <button type="button" class="btn btn-danger" id="confirmCancelBtn">
+                                <i class="bi bi-x-circle me-1"></i>Ακύρωση
+                            </button>
+                        </div>
+
                     </div>
                 </div>
             </div>

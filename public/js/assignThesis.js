@@ -554,19 +554,14 @@ async function handleCancelAssignment() {
     }
 
     try {
-        // Show loading state
         confirmCancelBtn.disabled = true;
         confirmCancelBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Ακύρωση...';
 
-        // Make API call to cancel assignment
-        const response = await fetch('/prof/cancel-assignment', {
-            method: 'POST',
+        const response = await fetch(`/prof/cancel-under-assignment/${currentAssignmentToCancel.id}`, {
+            method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                thesisId: currentAssignmentToCancel.id
-            })
         });
 
         if (!response.ok) {

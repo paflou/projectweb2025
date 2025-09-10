@@ -9,7 +9,8 @@ const {
   getUnderAssignment,
   getAvailableTopics,
   assignThesisToStudent,
-  cancelThesisAssignment,
+  cancelActiveThesisAssignment,
+  cancelThesisUnderAssignment,
   searchStudents,
   getTemporaryAssignments,
   getThesisTimeline,
@@ -19,11 +20,35 @@ const {
   getProfessorNotesForThesis,
   addNoteForThesis,
   editNote,
-  deleteNote
+  deleteNote,
+  getProfessorRole,
+  getAssignmentDate,
+  markUnderReview
 } = professorService;
 
 
-// Fetch and return the theses the professor is supervising or is committee member of
+router.get('/check-professor-role/:thesisId', checkPermission('professor'), async (req, res) => {
+  try {
+    const professorId = req.session.userId;
+    const thesisId = req.params.thesisId;
+
+    // Retrieve student information from the database
+    const role = await getProfessorRole(thesisId, professorId);
+    if (role) {
+      // Set response header to JSON and send the info
+      res.setHeader('Content-Type', 'application/json');
+      res.json({ role });
+    } else {
+      // If no info found, send 200 with empty array
+      res.status(200).json({ role: [] });
+    }
+  } catch (err) {
+    // Log and send server error if something goes wrong
+    console.error('Error in /get-info:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
 router.get('/get-relevant-thesis', checkPermission('professor'), async (req, res) => {
   try {
     // Retrieve student information from the database
@@ -147,15 +172,15 @@ router.post('/assign-thesis', checkPermission('professor'), async (req, res) => 
   }
 });
 
-router.post('/cancel-assignment', checkPermission('professor'), async (req, res) => {
+router.put('/cancel-under-assignment/:thesisId', checkPermission('professor'), async (req, res) => {
   try {
-    const { thesisId } = req.body;
+    const { thesisId } = req.params;
 
     if (!thesisId) {
       return res.status(400).json({ error: 'Thesis ID is required' });
     }
 
-    const result = await cancelThesisAssignment(req, thesisId);
+    const result = await cancelThesisUnderAssignment(req, thesisId);
 
     if (result.success) {
       res.status(200).json({ message: 'Assignment cancelled successfully' });
@@ -164,6 +189,56 @@ router.post('/cancel-assignment', checkPermission('professor'), async (req, res)
     }
   } catch (err) {
     console.error('Error in /cancel-assignment:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+router.put('/cancel-active-assignment/:thesisId', checkPermission('professor'), async (req, res) => {
+  try {
+    const thesisId = req.params.thesisId;
+    const { assemblyNumber, assemblyYear } = req.body;
+    // Validate required fields
+    if (!thesisId) {
+      console.error("No thesisId")
+      return res.status(400).json({ error: 'Thesis ID is required' });
+    }
+
+    if (!assemblyYear || isNaN(assemblyYear) || assemblyYear.toString().length !== 4) {
+      console.error("No assembly year")
+      return res.status(400).json({ error: 'Valid assembly year is required' });
+    }
+
+    const result = await cancelActiveThesisAssignment(req, thesisId, assemblyNumber, assemblyYear);
+
+    if (result.success) {
+      res.status(200).json({ message: 'Assignment cancelled successfully' });
+    } else {
+      console.error(result.error)
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /cancel-assignment:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+router.put('/mark-under-review/:thesisId', checkPermission('professor'), async (req, res) => {
+  try {
+    const { thesisId } = req.params;
+
+    if (!thesisId) {
+      return res.status(400).json({ error: 'Thesis ID is required' });
+    }
+
+    const result = await markUnderReview(req.session.userId, thesisId);
+
+    if (result.success) {
+      res.status(200).json({ message: 'Assignment marked as under review successfully' });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /mark-under-review:', err);
     res.status(500).json({ error: 'Server Error' });
   }
 });
@@ -258,6 +333,27 @@ router.get('/get-notes/:id', checkPermission('professor'), async (req, res) => {
     }
 
     res.json(note);
+  } catch (err) {
+    console.error("Error fetching thesis note:", err);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+router.get('/get-assignment-date/:id', checkPermission('professor'), async (req, res) => {
+  const thesisId = req.params.id;
+
+  if (!thesisId) {
+    return res.status(400).send('Thesis ID is required');
+  }
+
+  try {
+    const date = await getAssignmentDate(thesisId);
+
+    if (!date || date.length === 0) {
+      return res.json({ date: [] });
+    }
+
+    res.json(date);
   } catch (err) {
     console.error("Error fetching thesis note:", err);
     res.status(500).send('Internal Server Error');

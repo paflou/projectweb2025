@@ -357,7 +357,8 @@ async function assignThesisToStudent(req, thesisId, studentId) {
   }
 }
 
-async function cancelThesisAssignment(req, thesisId) {
+
+async function cancelThesisUnderAssignment(req, thesisId) {
   const conn = await pool.getConnection();
 
   try {
@@ -368,16 +369,16 @@ async function cancelThesisAssignment(req, thesisId) {
       FROM thesis
       WHERE id = ? AND supervisor_id = ? AND thesis_status = 'under-assignment'
     `;
-    const thesisRows = await conn.query(checkThesisSql, [thesisId, req.session.userId]);
-    console.log('DEBUG checkThesisSql result:', thesisRows);
+    const thesisRow = await conn.query(checkThesisSql, [thesisId, req.session.userId]);
+    console.log('DEBUG checkThesisSql result:', thesisRow);
 
-    if (!thesisRows || thesisRows.length === 0) {
+    if (!thesisRow) {
       await conn.rollback();
       conn.release();
       return { success: false, error: 'Thesis not found or not available for cancellation' };
     }
 
-    if (thesisRows.student_id === null) {
+    if (thesisRow.student_id === null) {
       await conn.rollback();
       conn.release();
       return { success: false, error: 'Thesis is not currently assigned to any student' };
@@ -405,6 +406,82 @@ async function cancelThesisAssignment(req, thesisId) {
       conn.release();
       return { success: false, error: 'Failed to cancel assignment' };
     }
+
+    await conn.commit();
+    conn.release();
+
+    return { success: true };
+
+  } catch (err) {
+    await conn.rollback();
+    conn.release();
+    console.error('Error in cancelThesisAssignment:', err);
+    throw err;
+  }
+}
+
+async function cancelActiveThesisAssignment(req, thesisId, assemblyNumber, assemblyYear) {
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    // 1. Check if thesis exists and is active
+    const checkThesisSql = `
+      SELECT id, title, student_id
+      FROM thesis
+      WHERE id = ? AND supervisor_id = ? AND thesis_status = 'active'
+    `;
+    const thesisRows = await conn.query(checkThesisSql, [thesisId, req.session.userId]);
+    console.log('DEBUG checkThesisSql result:', thesisRows);
+
+    if (!thesisRows || thesisRows.length === 0) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Thesis not found or not available for cancellation' };
+    }
+
+    const thesis = thesisRows[0];
+
+    if (thesis.student_id === null) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Thesis is not currently assigned to any student' };
+    }
+
+    // 2. Delete committee invitations
+    const deleteInvitationsSql = `
+      DELETE FROM committee_invitation
+      WHERE thesis_id = ?
+    `;
+    await conn.query(deleteInvitationsSql, [thesisId]);
+
+    // 3. Update thesis to unassign student and reset members
+    const updateSql = `
+      UPDATE thesis
+      SET 
+        student_id = NULL,
+        member1_id = NULL,
+        member2_id = NULL,
+        thesis_status = 'under-assignment'
+      WHERE id = ? AND supervisor_id = ?
+    `;
+    const updateResult = await conn.query(updateSql, [thesisId, req.session.userId]);
+
+    if (!updateResult || updateResult.affectedRows === 0) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Failed to cancel assignment' };
+    }
+
+    // 4. Insert a log entry in thesis_log
+    const insertLogSql = `
+      INSERT INTO thesis_log (thesis_id, user_id, user_role, action)
+      VALUES (?, ?, 'supervisor', ?)
+    `;
+    const logReason = `Unassigned by supervisor (Γ.Σ. ${assemblyNumber}/${assemblyYear})`;
+    console.log(logReason)
+    await conn.query(insertLogSql, [thesisId, req.session.userId, logReason]);
 
     await conn.commit();
     conn.release();
@@ -886,6 +963,111 @@ async function deleteNote(noteId, professorId) {
   }
 }
 
+async function getProfessorRole(thesisId, professorId) {
+  const sql = `
+        SELECT 
+            CASE
+                WHEN supervisor_id = ? THEN 'supervisor'
+                WHEN member1_id = ? OR member2_id = ? THEN 'member'
+                ELSE NULL
+            END AS role
+        FROM thesis
+        WHERE id = ?;
+    `;
+
+  const rows = await pool.query(sql, [professorId, professorId, professorId, thesisId]);
+  console.log(rows)
+  // If no thesis found or professor not related
+  if (rows.length === 0 || !rows[0].role) {
+    return null;
+  }
+
+  return rows[0].role;
+}
+
+async function getAssignmentDate(thesisId) {
+  const sql = `
+        SELECT 
+          created_at
+        FROM thesis_log
+        WHERE thesis_id = ? AND action = 'assigned'
+        ORDER BY created_at DESC LIMIT 1;
+    `;
+
+  const rows = await pool.query(sql, thesisId);
+  console.log(rows)
+  // If no thesis found or professor not related
+  if (rows.length === 0) {
+    return null;
+  }
+
+  return rows[0].created_at;
+}
+
+async function markUnderReview(professorId, thesisId) {
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        // 1. Check the role of the user for this thesis
+        const roleSql = `
+            SELECT 
+                CASE
+                    WHEN supervisor_id = ? THEN 'supervisor'
+                    WHEN member1_id = ? OR member2_id = ? THEN 'member'
+                    ELSE NULL
+                END AS role
+            FROM thesis
+            WHERE id = ?;
+        `;
+        const rows = await conn.query(roleSql, [professorId, professorId, professorId, thesisId]);
+
+        if (!rows || rows.length === 0 || !rows[0].role) {
+            await conn.rollback();
+            conn.release();
+            return { success: false, error: 'You are not authorized to update this thesis' };
+        }
+
+        if (rows[0].role !== 'supervisor') {
+            await conn.rollback();
+            conn.release();
+            return { success: false, error: 'Only supervisors can mark under review' };
+        }
+
+        // 2. Update thesis status
+        const updateSql = `
+            UPDATE thesis
+            SET thesis_status = 'under-review'
+            WHERE id = ?;
+        `;
+        const updateResult = await conn.query(updateSql, [thesisId]);
+
+        if (!updateResult || updateResult.affectedRows === 0) {
+            await conn.rollback();
+            conn.release();
+            return { success: false, error: 'Failed to update thesis status' };
+        }
+
+        // 3. Log the action
+        const logSql = `
+            INSERT INTO thesis_log (thesis_id, user_id, user_role, action)
+            VALUES (?, ?, 'supervisor', 'marked as under review');
+        `;
+        await conn.query(logSql, [thesisId, professorId]);
+
+        await conn.commit();
+        conn.release();
+        return { success: true };
+    } catch (err) {
+        await conn.rollback();
+        conn.release();
+        console.error('Error in markUnderReview:', err);
+        return { success: false, error: 'Server error' };
+    }
+}
+
+
+
 module.exports = {
   insertThesisToDB,
   getUnderAssignment,
@@ -894,7 +1076,8 @@ module.exports = {
   getAvailableTopics,
   assignThesisToStudent,
   getTemporaryAssignments,
-  cancelThesisAssignment,
+  cancelActiveThesisAssignment,
+  cancelThesisUnderAssignment,
   updateThesis,
   getProfessorInvitations,
   acceptInvitation,
@@ -907,6 +1090,9 @@ module.exports = {
   getProfessorNotesForThesis,
   addNoteForThesis,
   editNote,
-  deleteNote
+  deleteNote,
+  getProfessorRole,
+  getAssignmentDate,
+  markUnderReview
 };
 

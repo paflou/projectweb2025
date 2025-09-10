@@ -318,32 +318,30 @@ INSERT INTO professor (id, topic, department, university) VALUES
 -- ================================
 -- Thesis examples (one per status)
 -- ================================
-INSERT INTO thesis (id, title, description, student_id, supervisor_id, member1_id, member2_id, thesis_status) VALUES
+INSERT INTO thesis (id, title, description, supervisor_id, member1_id, member2_id, thesis_status) VALUES
 -- under-assignment (only 1 member is OK)
-(1, 'Edge Computing for IoT', 'Optimizing IoT devices with edge computing.', 10000, 101, 103, NULL, 'under-assignment'),
+(1, 'Edge Computing for IoT', 'Optimizing IoT devices with edge computing.', 101, 103, NULL, 'under-assignment'),
 
 -- active (2 members required)
-(2, 'Smart Agriculture Sensors', 'IoT-based monitoring for precision farming.', 10001, 102, 101, 146, 'active'),
+(2, 'Smart Agriculture Sensors', 'IoT-based monitoring for precision farming.', 102, 101, 146, 'active'),
 
 -- under-review (2 members required)
-(3, 'AI in Cybersecurity', 'AI-driven threat detection and prevention systems.', 10002, 103, 101, 146, 'under-review'),
+(3, 'AI in Cybersecurity', 'AI-driven threat detection and prevention systems.', 103, 101, 146, 'under-review'),
 
 -- canceled (2 members required)
-(4, 'Blockchain in Supply Chain', 'Enhancing transparency using blockchain.', 10004, 101, 103, 146, 'canceled'),
+(4, 'Blockchain in Supply Chain', 'Enhancing transparency using blockchain.', 101, 103, 146, 'canceled'),
 
+-- another under-assignment example
+(6, 'Testing', 'Enhancing transparency using blockchain.', 146, 103, NULL, 'under-assignment');
 
-(6, 'Testing', 'Enhancing transparency using blockchain.', 10006, 146, 103, NULL, 'under-assignment');
-
-
+-- completed thesis with all fields but without student_id
 INSERT INTO thesis (
-    id, title, description, student_id, supervisor_id, member1_id, member2_id, thesis_status,
+    id, title, description, supervisor_id, member1_id, member2_id, thesis_status,
     pdf, draft, exam_datetime, exam_mode, exam_location, final_repository_link, submission_date, grade
 ) VALUES
--- completed thesis with all fields
 (5,
  'Machine Learning in Healthcare',
  'Improving diagnostics with ML algorithms.',
- 10003,
  146,   -- supervisor_id
  102,   -- member1_id
  103,   -- member2_id
@@ -357,6 +355,13 @@ INSERT INTO thesis (
  CURRENT_TIMESTAMP,                   -- submission_date
  9.25                                  -- grade
 );
+
+UPDATE thesis SET student_id = 10000 WHERE id = 1; -- under-assignment
+UPDATE thesis SET student_id = 10001 WHERE id = 2; -- active
+UPDATE thesis SET student_id = 10002 WHERE id = 3; -- under-review
+UPDATE thesis SET student_id = 10004 WHERE id = 4; -- canceled
+UPDATE thesis SET student_id = 10003 WHERE id = 5; -- completed
+UPDATE thesis SET student_id = 10006 WHERE id = 6; -- under-assignment
 
 
 -- =========================================
