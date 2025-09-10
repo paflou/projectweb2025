@@ -30,7 +30,6 @@ const markAsUnderReviewBtn = document.getElementById('markAsUnderReviewBtn');
 const underReviewSection = document.getElementById('underReviewSection');
 const viewDraftBtn = document.getElementById('viewDraftBtn');
 const announcementSection = document.getElementById('announcementSection');
-const generateAnnouncementBtn = document.getElementById('generateAnnouncementBtn');
 
 const gradingSection = document.getElementById('gradingSection');
 const gradesTable = document.getElementById('gradesTable');
@@ -104,6 +103,12 @@ async function fetchAssignmentDate() {
     return await response.json();
 }
 
+async function checkPresentation() {
+    const response = await fetch(`/prof/get-presentation-date/${thesisId}`);
+    if (!response.ok) return [];
+    return await response.json();
+}
+
 // === DOM Rendering ===
 function hideLoading() {
     loadingState.classList.add('d-none');
@@ -134,7 +139,6 @@ async function renderSections(thesis) {
     pendingAssignmentSection.classList.add('d-none');
     activeThesisSection.classList.add('d-none');
     underReviewSection.classList.add('d-none');
-    gradingSection.classList.add('d-none');
 
     // Show section depending on status
     switch (thesis.status) {
@@ -149,15 +153,36 @@ async function renderSections(thesis) {
                 setUpSupervisorActionsForActiveThesis(thesisId);
             break;
         case 'under-review':
-            underReviewSection.classList.remove('d-none');
-            gradingSection.classList.remove('d-none');
-
-            break;
+            setUpUnderReview();
+            if (role === 'supervisor')
+                setUpSupervisorActionsForUnderReview();
         case 'completed':
             break;
     }
 }
+async function setUpSupervisorActionsForUnderReview() {
+    const generateAnnouncementBtn = document.getElementById('generateAnnouncementBtn');
 
+    const date = await checkPresentation();
+    console.log(date)
+
+    if (date.exam_datetime === null || date.exam_mode === null || date.exam_location === null)
+        return;
+    else {
+        generateAnnouncementBtn.classList.remove('disabled')
+    }
+
+
+}
+
+function setUpUnderReview() {
+    const viewDraftBtn = document.getElementById('viewDraftBtn');
+
+    viewDraftBtn.addEventListener('click', () => {
+        window.location.href = `/prof/download-thesis/${thesisId}`;
+    });
+    underReviewSection.classList.remove('d-none');
+}
 
 // === Event Listeners ===
 function setupEventListeners(thesis) {

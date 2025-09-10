@@ -1005,12 +1005,12 @@ async function getAssignmentDate(thesisId) {
 }
 
 async function markUnderReview(professorId, thesisId) {
-    const conn = await pool.getConnection();
-    try {
-        await conn.beginTransaction();
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
 
-        // 1. Check the role of the user for this thesis
-        const roleSql = `
+    // 1. Check the role of the user for this thesis
+    const roleSql = `
             SELECT 
                 CASE
                     WHEN supervisor_id = ? THEN 'supervisor'
@@ -1020,52 +1020,99 @@ async function markUnderReview(professorId, thesisId) {
             FROM thesis
             WHERE id = ?;
         `;
-        const rows = await conn.query(roleSql, [professorId, professorId, professorId, thesisId]);
+    const rows = await conn.query(roleSql, [professorId, professorId, professorId, thesisId]);
 
-        if (!rows || rows.length === 0 || !rows[0].role) {
-            await conn.rollback();
-            conn.release();
-            return { success: false, error: 'You are not authorized to update this thesis' };
-        }
+    if (!rows || rows.length === 0 || !rows[0].role) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'You are not authorized to update this thesis' };
+    }
 
-        if (rows[0].role !== 'supervisor') {
-            await conn.rollback();
-            conn.release();
-            return { success: false, error: 'Only supervisors can mark under review' };
-        }
+    if (rows[0].role !== 'supervisor') {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Only supervisors can mark under review' };
+    }
 
-        // 2. Update thesis status
-        const updateSql = `
+    // 2. Update thesis status
+    const updateSql = `
             UPDATE thesis
             SET thesis_status = 'under-review'
             WHERE id = ?;
         `;
-        const updateResult = await conn.query(updateSql, [thesisId]);
+    const updateResult = await conn.query(updateSql, [thesisId]);
 
-        if (!updateResult || updateResult.affectedRows === 0) {
-            await conn.rollback();
-            conn.release();
-            return { success: false, error: 'Failed to update thesis status' };
-        }
+    if (!updateResult || updateResult.affectedRows === 0) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Failed to update thesis status' };
+    }
 
-        // 3. Log the action
-        const logSql = `
+    // 3. Log the action
+    const logSql = `
             INSERT INTO thesis_log (thesis_id, user_id, user_role, action)
             VALUES (?, ?, 'supervisor', 'marked as under review');
         `;
-        await conn.query(logSql, [thesisId, professorId]);
+    await conn.query(logSql, [thesisId, professorId]);
 
-        await conn.commit();
-        conn.release();
-        return { success: true };
-    } catch (err) {
-        await conn.rollback();
-        conn.release();
-        console.error('Error in markUnderReview:', err);
-        return { success: false, error: 'Server error' };
-    }
+    await conn.commit();
+    conn.release();
+    return { success: true };
+  } catch (err) {
+    await conn.rollback();
+    conn.release();
+    console.error('Error in markUnderReview:', err);
+    return { success: false, error: 'Server error' };
+  }
 }
 
+
+async function getDraftFilename(thesisId, professorId) {
+  const sql = `
+    SELECT draft
+    FROM thesis
+    WHERE id = ?
+      AND (
+        supervisor_id = ? 
+        OR member1_id = ? 
+        OR member2_id = ?
+      );
+  `;
+
+  const filename = await pool.query(sql, [thesisId, professorId, professorId, professorId]);
+
+  // If no file found 
+  if (filename.length === 0) {
+    return null;
+  }
+
+  return filename[0].draft;
+}
+
+async function getPresentationDate(thesisId, professorId) {
+  const sql = `
+    SELECT
+    exam_datetime,
+    exam_mode,
+    exam_location
+    FROM thesis
+    WHERE id = ?
+      AND (
+        supervisor_id = ? 
+        OR member1_id = ? 
+        OR member2_id = ?
+      );
+  `;
+
+  const date = await pool.query(sql, [thesisId, professorId, professorId, professorId]);
+
+  // If no file found 
+  if (date.length === 0) {
+    return null;
+  }
+
+  return date[0];
+}
 
 
 // Function to get statistics for instructor (both supervised and committee member theses)
@@ -1185,6 +1232,8 @@ module.exports = {
   deleteNote,
   getProfessorRole,
   getAssignmentDate,
-  markUnderReview
+  markUnderReview,
+  getDraftFilename,
+  getPresentationDate
 };
 

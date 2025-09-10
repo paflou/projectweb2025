@@ -147,7 +147,7 @@
 
                 <!-- Υπό Εξέταση Section -->
                 <div id="underReviewSection" class="card mb-4 d-none">
-                    <div class="card-header bg-info text-white">
+                    <div class="card-header bg-primary text-white">
                         <h5 class="mb-0">
                             <i class="bi bi-search me-2"></i>
                             Υπό Εξέταση
@@ -171,13 +171,17 @@
                             <h6 class="text-primary">
                                 <i class="bi bi-megaphone me-2"></i>Ανακοίνωση Παρουσίασης
                             </h6>
-                            <button class="btn btn-outline-secondary" id="generateAnnouncementBtn">
+                            <p class="text-muted">
+                                Ως υπεύθυνος καθηγητής, έχετε την δυνατότητα <b>μετά τον ορισμό ημερομηνίας εξέτασης
+                                από τον φοιτητή </b>, να δημιουργήσετε αυτοματοποιημένη ανακοίνωση προς τα μέλη του πανεπιστημίου.
+                            </p>
+                            <button class="btn btn-outline-secondary disabled" id="generateAnnouncementBtn">
                                 <i class="bi bi-file-earmark-plus me-2"></i>Δημιουργία Ανακοίνωσης
                             </button>
                         </div>
 
                         <!-- Grading Section -->
-                        <div id="gradingSection" class="d-none">
+                        <div id="gradingSection">
                             <h6 class="text-primary mb-3">
                                 <i class="bi bi-bar-chart-steps me-2"></i>Καταχώρηση Βαθμού
                             </h6>
@@ -216,7 +220,6 @@
                                 <i class="bi bi-pencil-square me-2"></i>Καταχώρηση Βαθμού
                             </button>
                         </div>
-
                     </div>
                 </div>
             </div>

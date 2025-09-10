@@ -3,6 +3,8 @@ const router = express.Router();
 const { submitThesis } = require("../../controllers/professorController");
 const checkPermission = require('../../middlewares/checkPermission');
 const professorService = require('../../services/professorService');
+const path = require("path");
+const fs = require("fs");
 
 const {
   getRelevantThesis,
@@ -24,7 +26,9 @@ const {
   deleteNote,
   getProfessorRole,
   getAssignmentDate,
-  markUnderReview
+  markUnderReview,
+  getDraftFilename,
+  getPresentationDate
 } = professorService;
 
 
@@ -411,6 +415,50 @@ router.delete('/delete-thesis-note', checkPermission('professor'), async (req, r
   return res.status(400).json({ error: response.error });
 });
 
+router.get('/download-thesis/:thesisId', checkPermission('professor'), async (req, res) => {
+  try {
+    const { thesisId } = req.params;
+    const professorId = req.session.userId;
+
+    const filename = await getDraftFilename(thesisId, professorId);
+
+    if (!filename) {
+      return res.status(403).json({ error: 'Access denied or file not found' });
+    }
+
+    const filePath = path.join(process.cwd(), 'uploads/theses', filename);
+
+    if (fs.existsSync(filePath)) {
+      res.download(filePath);
+    } else {
+      res.status(404).json({ error: 'File not found' });
+    }
+  } catch (err) {
+    console.error('Error in /download-thesis:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+router.get('/get-presentation-date/:id', checkPermission('professor'), async (req, res) => {
+  const thesisId = req.params.id;
+
+  if (!thesisId) {
+    return res.status(400).send('Thesis ID is required');
+  }
+
+  try {
+    const date = await getPresentationDate(thesisId, req.session.userId);
+
+    if (!date || date.length === 0) {
+      return res.json({ date: [] });
+    }
+
+    res.json(date);
+  } catch (err) {
+    console.error("Error fetching exam date:", err);
+    res.status(500).send('Internal Server Error');
+  }
+});
 
 // Get instructor statistics
 router.get('/statistics', checkPermission('professor'), async (req, res) => {

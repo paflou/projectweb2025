@@ -4,14 +4,15 @@ const pool = require("../../db/db");
 const fs = require('fs');
 const path = require("path");
 const checkPermission = require("../../middlewares/checkPermission");
-const handleThesisUpload = require("../../middlewares/handleFileUpload");
+const { handleThesisUpload } = require("../../middlewares/handleFileUpload");
 
 const {
   getThesisInfo,
   getDetailedThesisInfo,
   addMaterialLink,
   saveExamDetails,
-  saveRepositoryLink
+  saveRepositoryLink,
+  saveFileNameToDB
 } = require("../../services/studentService");
 
 const { getThesisTimeline } = require("../../services/professorService");
