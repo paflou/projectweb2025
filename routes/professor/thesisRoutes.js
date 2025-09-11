@@ -28,7 +28,13 @@ const {
   getAssignmentDate,
   markUnderReview,
   getDraftFilename,
-  getPresentationDate
+  getPresentationDate,
+  createPresentationAnnouncement,
+  getPresentationAnnouncement,
+  enableGrading,
+  getGradingStatus,
+  getGrades,
+  saveProfessorGrade
 } = professorService;
 
 
@@ -393,13 +399,13 @@ router.post('/add-thesis-note', checkPermission('professor'), async (req, res) =
 
 router.put('/edit-thesis-note', checkPermission('professor'), async (req, res) => {
   const { noteId, text } = req.body;
-  console.log(noteId);
-  console.log(text)
+  //console.log(noteId);
+  //console.log(text)
   if (!noteId || !text || text.length === 0 || text.length > 300) {
     return res.status(400).json({ error: 'Invalid input.' });
   }
   const response = await editNote(noteId, req.session.userId, text);
-  console.log(response)
+  //console.log(response)
   if (response.success)
     return res.status(200).json({ success: true, message: 'Note updated successfully.' });
   return res.status(400).json({ error: response.error });
@@ -470,6 +476,142 @@ router.get('/statistics', checkPermission('professor'), async (req, res) => {
     ));
   } catch (err) {
     console.error('Error in /statistics:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+router.post('/create-presentation-announcement/:thesisId', checkPermission('professor'), async (req, res) => {
+  try {
+    const thesisId = req.params.thesisId;
+    const text = req.body.text;
+
+    if (!thesisId || !text) {
+      return res.status(400).json({ error: 'Thesis ID and announcement text is required' });
+    }
+
+    const result = await createPresentationAnnouncement(thesisId, text);
+
+    if (result.success) {
+      res.status(200).json({ message: 'Thesis assigned successfully' });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /assign-thesis:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+router.get('/get-presentation-announcement/:thesisId', checkPermission('professor'), async (req, res) => {
+  const thesisId = req.params.thesisId;
+
+  if (!thesisId) {
+    return res.status(400).send('Thesis ID is required');
+  }
+
+  try {
+    const announcement = await getPresentationAnnouncement(thesisId);
+
+    if (!announcement || announcement.length === 0) {
+      return res.json({ announcement: [] });
+    }
+    //console.log(announcement)
+    res.json(announcement);
+  } catch (err) {
+    console.error("Error fetching exam date:", err);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+router.put('/enable-grading/:thesisId', checkPermission('professor'), async (req, res) => {
+  try {
+    const { thesisId } = req.params;
+
+    if (!thesisId) {
+      return res.status(400).json({ error: 'Thesis ID is required' });
+    }
+
+    const result = await enableGrading(thesisId, req.session.userId);
+
+    if (result) {
+      res.status(200).json({ message: 'Grading enabled successfully' });
+    } else {
+      res.status(400).json({ error: 'No thesis found or you are not the supervisor' });
+    }
+  } catch (err) {
+    console.error('Error in /enable-grading:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+router.get('/get-grading-status/:thesisId', checkPermission('professor'), async (req, res) => {
+  const thesisId = req.params.thesisId;
+
+  if (!thesisId) {
+    return res.status(400).send('Thesis ID is required');
+  }
+
+  try {
+    const status = await getGradingStatus(thesisId);
+    console.log(status)
+
+    if (!status || status.length === 0) {
+      return res.json({ status: false });
+    }
+    return res.json({ status: true });
+  } catch (err) {
+    console.error("Error fetching exam date:", err);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+router.get('/get-grades/:id', checkPermission('professor'), async (req, res) => {
+  const thesisId = req.params.id;
+  const professorId = req.session.userId;
+
+  if (!thesisId) {
+    return res.status(400).send('Thesis ID is required');
+  }
+
+  try {
+    const grades = await getGrades(thesisId);
+
+    if (!grades || grades.length === 0) {
+      return res.json({ grades: [], message: '' });
+    }
+
+    // Check if the current professor has graded
+    const hasGraded = grades.some(grade => grade.id === professorId);
+
+    const message = hasGraded
+      ? 'hasGraded'
+      : 'hasNotGraded';
+
+    res.json({ grades, message });
+  } catch (err) {
+    console.error("Error fetching thesis grades:", err);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+router.post('/save-grade/:thesisId', checkPermission('professor'), async (req, res) => {
+  try {
+    const thesisId = req.params.thesisId;
+    const data = req.body.data;
+
+    if (!thesisId || !data) {
+      return res.status(400).json({ error: 'Thesis ID and data is required' });
+    }
+
+    const result = await saveProfessorGrade(req.session.userId, thesisId, data);
+
+    if (result.success) {
+      res.status(200).json({ message: 'Thesis assigned successfully' });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /assign-thesis:', err);
     res.status(500).json({ error: 'Server Error' });
   }
 });

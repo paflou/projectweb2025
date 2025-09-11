@@ -6,38 +6,49 @@ const pool = require("../db/db"); // Import database connection pool
 // Service function to get thesis presentations with date filtering
 async function getThesisPresentations(startDate, endDate) {
   let sql = `
-    SELECT
-      t.id,
-      t.title,
-      t.description,
-      t.exam_datetime,
-      t.exam_mode,
-      t.exam_location,
-      CONCAT(s.name, ' ', s.surname) AS student_name,
-      CONCAT(sup.name, ' ', sup.surname) AS supervisor_name,
-      CONCAT(m1.name, ' ', m1.surname) AS member1_name,
-      CONCAT(m2.name, ' ', m2.surname) AS member2_name,
-      sup_prof.department AS supervisor_department
-    FROM thesis t
-    INNER JOIN user s ON t.student_id = s.id
-    INNER JOIN user sup ON t.supervisor_id = sup.id
-    INNER JOIN professor sup_prof ON t.supervisor_id = sup_prof.id
-    LEFT JOIN user m1 ON t.member1_id = m1.id
-    LEFT JOIN user m2 ON t.member2_id = m2.id
-    WHERE t.exam_datetime IS NOT NULL
-      AND t.thesis_status != 'completed'
+SELECT
+    ta.id AS announcement_id,
+    
+    u_student.name AS student_name,
+    u_student.surname AS student_surname,
+    
+    u_supervisor.name AS supervisor_name,
+    u_supervisor.surname AS supervisor_surname,
+    
+    u_member1.name AS member1_name,
+    u_member1.surname AS member1_surname,
+    
+    u_member2.name AS member2_name,
+    u_member2.surname AS member2_surname,
+    
+    t.title AS thesis_title,
+    t.exam_datetime,
+    t.exam_mode,
+    t.exam_location,
+    
+    ta.announcement_text,
+    ta.created_at AS announcement_created_at
+
+FROM thesis_announcement ta
+INNER JOIN thesis t ON ta.thesis_id = t.id
+
+INNER  JOIN user u_student ON t.student_id = u_student.id AND u_student.role = 'student'
+INNER  JOIN user u_supervisor ON t.supervisor_id = u_supervisor.id AND u_supervisor.role = 'professor'
+INNER  JOIN user u_member1 ON t.member1_id = u_member1.id AND u_member1.role = 'professor'
+INNER  JOIN user u_member2 ON t.member2_id = u_member2.id AND u_member2.role = 'professor'
+
   `;
 
   const params = [];
 
   if (startDate && endDate) {
-    sql += ` AND DATE(t.exam_datetime) BETWEEN ? AND ?`;
+    sql += ` WHERE DATE(t.exam_datetime) BETWEEN ? AND ?`;
     params.push(startDate, endDate);
   } else if (startDate) {
-    sql += ` AND DATE(t.exam_datetime) >= ?`;
+    sql += ` WHERE DATE(t.exam_datetime) >= ?`;
     params.push(startDate);
   } else if (endDate) {
-    sql += ` AND DATE(t.exam_datetime) <= ?`;
+    sql += ` WHERE DATE(t.exam_datetime) <= ?`;
     params.push(endDate);
   }
 

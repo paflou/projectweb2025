@@ -33,7 +33,6 @@ const announcementSection = document.getElementById('announcementSection');
 
 const gradingSection = document.getElementById('gradingSection');
 const gradesTable = document.getElementById('gradesTable');
-const saveGradeBtn = document.getElementById('saveGradeBtn');
 
 
 const cancelAssignmentModal = document.getElementById('cancelAssignmentModal');
@@ -109,6 +108,59 @@ async function checkPresentation() {
     return await response.json();
 }
 
+async function createPresentationAnnouncement(text) {
+    const response = await fetch(`/prof/create-presentation-announcement/${thesisId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ text })
+    });
+    if (!response.ok) throw new Error('Failed to create announcement');
+    return await response.json();
+}
+
+async function checkAnnouncement() {
+    const response = await fetch(`/prof/get-presentation-announcement/${thesisId}`);
+    if (!response.ok) return [];
+    return await response.json();
+}
+
+async function checkGrading() {
+    const response = await fetch(`/prof/get-grading-status/${thesisId}`);
+    if (!response.ok) return [];
+    return await response.json();
+}
+
+async function enableGrading() {
+    const response = await fetch(`/prof/enable-grading/${thesisId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    });
+    if (!response.ok) throw new Error('Failed to create announcement');
+    return await response.json();
+}
+
+async function getGrades() {
+    const response = await fetch(`/prof/get-grades/${thesisId}`);
+    if (!response.ok) return [];
+    return await response.json();
+}
+
+async function saveGrade(data) {
+    const response = await fetch(`/prof/save-grade/${thesisId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ data })
+    });
+    if (!response.ok) throw new Error('Failed to create announcement');
+    return await response.json();
+}
+
 // === DOM Rendering ===
 function hideLoading() {
     loadingState.classList.add('d-none');
@@ -131,14 +183,22 @@ function renderThesisDetails(thesis) {
     thesisStatusBadge.textContent = getStatusText(thesis.status);
 }
 
+function setUpModals() {
+    const successModalEl = document.getElementById('successModal');
+    const errorModalEl = document.getElementById('errorModal');
+
+    successModalEl.addEventListener('hidden.bs.modal', () => {
+        location.reload(); // refresh the page when modal is fully hidden
+    });
+
+    errorModalEl.addEventListener('hidden.bs.modal', () => {
+        location.reload(); // refresh the page when modal is fully hidden
+    });
+}
+
 async function renderSections(thesis) {
     // Get professor role
     const role = await checkRole(thesisId);
-
-    // Hide all sections first
-    pendingAssignmentSection.classList.add('d-none');
-    activeThesisSection.classList.add('d-none');
-    underReviewSection.classList.add('d-none');
 
     // Show section depending on status
     switch (thesis.status) {
@@ -150,30 +210,247 @@ async function renderSections(thesis) {
             activeThesisSection.classList.remove('d-none');
             populateNoteField();
             if (role === 'supervisor')
-                setUpSupervisorActionsForActiveThesis(thesisId);
+                setUpSupervisorActionsForActiveThesis();
             break;
         case 'under-review':
             setUpUnderReview();
-            if (role === 'supervisor')
-                setUpSupervisorActionsForUnderReview();
+
+            const gradingEnabled = await checkGrading();
+
+            if (role === 'supervisor') {
+                setUpAnnouncementSection();
+                if (gradingEnabled.status === false) setUpGradingSection();
+            }
+            else {
+                const gradingNotEnabledNotice = document.getElementById('gradingNotEnabledNotice');
+                if (gradingEnabled.status === false) gradingNotEnabledNotice.classList.remove('d-none')
+            }
+
+            console.log(gradingEnabled.status)
+            if (gradingEnabled.status === true) {
+                setUpGradeModal();
+                populateGradesTable();
+                gradingSection.classList.remove('d-none');
+            }
+            break;
         case 'completed':
+            const underReviewTitle = document.getElementById('underReviewTitle');
+
+            populateGradesTable();
+            openGradeModalBtn.classList.add('d-none');
+            underReviewTitle.textContent = "Ολοκληρωμένη";
+            underReviewSection.classList.remove('d-none');
+            gradingSection.classList.remove('d-none');
             break;
     }
+    setUpModals();
 }
-async function setUpSupervisorActionsForUnderReview() {
-    const generateAnnouncementBtn = document.getElementById('generateAnnouncementBtn');
 
-    const date = await checkPresentation();
-    console.log(date)
+function setUpGradeModal() {
+    const gradeInputs = document.querySelectorAll('.grade-input');
+    const totalGradeField = document.getElementById('totalGrade');
+    const saveGradeBtn = document.getElementById('saveGradeBtn');
 
-    if (date.exam_datetime === null || date.exam_mode === null || date.exam_location === null)
+    // Weight percentages
+    const weights = [0.60, 0.15, 0.15, 0.10];
+    console.log(gradeInputs)
+    // Add input listener to enforce format and calculate total
+    gradeInputs.forEach(input => {
+        input.addEventListener('input', (e) => {
+            let value = e.target.value;
+
+            // Allow only digits and one decimal point
+            value = value.replace(/[^0-9.]/g, '');
+
+            const parts = value.split('.');
+
+            // Only allow one decimal point
+            if (parts.length > 2) value = parts[0] + '.' + parts[1];
+
+            // Limit integer part to 2 digits
+            if (parts[0].length > 2) {
+                parts[0] = parts[0].slice(0, 2);
+                value = parts.join('.');
+            }
+
+            // Limit decimal part to 2 digits
+            if (parts[1]?.length > 2) {
+                parts[1] = parts[1].slice(0, 2);
+                value = parts.join('.');
+            }
+
+            // Ensure max is 10.00
+            if (parseFloat(value) > 10) {
+                // If user tries to type above 10, revert to the previous valid value
+                value = e.target.getAttribute('data-last-valid') || '';
+            }
+
+            // Save current value as "last valid" for later reference
+            e.target.setAttribute('data-last-valid', value);
+
+            e.target.value = value;
+
+            let total = 0;
+
+            gradeInputs.forEach((input, index) => {
+                total += parseFloat(input.value) * weights[index];
+            });
+
+            totalGradeField.value = total.toFixed(2);
+        });
+    });
+
+    saveGradeBtn.addEventListener('click', async () => {
+        const confirmSaveGrade = confirm(
+            "Προσοχή! Η βαθμολογία για αυτή τη διπλωματική θα καταχωρηθεί ΟΡΙΣΤΙΚΑ. " +
+            "Μετά την αποθήκευση, δεν θα μπορείτε να την αλλάξετε. Είστε σίγουροι ότι θέλετε να συνεχίσετε;"
+        );
+
+        if (!confirmSaveGrade) return;
+
+        const data = {
+            criterion1: parseFloat(document.getElementById('criterion1').value),
+            criterion2: parseFloat(document.getElementById('criterion2').value),
+            criterion3: parseFloat(document.getElementById('criterion3').value),
+            criterion4: parseFloat(document.getElementById('criterion4').value),
+        };
+
+        const response = await saveGrade(data);
+        try {
+            showSuccess("Η βαθμολογία καταχωρήθηκε επιτυχώς");
+        } catch (err) {
+            showError(err.message);
+        }
+    });
+}
+
+async function setUpGradingSection() {
+    const enableGradingSectionBtn = document.getElementById('enableGradingSectionBtn');
+    const gradingSection = document.getElementById('gradingSection');
+    enableGradingSectionBtn.classList.remove('d-none');
+
+    enableGradingSectionBtn.addEventListener('click', async () => {
+        const confirmEnable = confirm(
+            "Είστε σίγουροι ότι θέλετε να ενεργοποιήσετε τη βαθμολόγηση; " +
+            "Αφού ενεργοποιηθεί, οι καθηγητές θα μπορούν να καταχωρήσουν βαθμούς."
+        );
+        if (!confirmEnable) return;
+
+        try {
+            const response = await fetch(`/prof/enable-grading/${thesisId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showSuccess(data.message);
+                enableGradingSectionBtn.disabled = true;
+                gradingSection.classList.remove('d-none');
+            } else {
+                showError(data.error);
+            }
+        } catch (err) {
+            showError(err.message);
+        }
+    });
+}
+
+async function populateGradesTable(thesisId) {
+    let grades = await getGrades(thesisId);
+    if (grades.message === 'hasGraded')
+        openGradeModalBtn.disabled = true;
+
+    //console.log(grades)
+    grades = grades.grades
+    const gradesTable = document.getElementById('gradesTable');
+    gradesTable.innerHTML = ''; // clear previous rows
+
+    if (!grades || grades.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="6" class="text-center text-muted">Δεν υπάρχουν βαθμολογίες</td>`;
+        gradesTable.appendChild(tr);
         return;
-    else {
-        generateAnnouncementBtn.classList.remove('disabled')
     }
 
+    grades.forEach(grade => {
+        const tr = document.createElement('tr');
+        const professor_name = grade.professor_name + " " + grade.professor_surname;
 
+        tr.innerHTML = `
+        <td>${professor_name}</td>
+        <td>${grade.criterion1 !== null ? grade.criterion1 : '-'}</td>
+        <td>${grade.criterion2 !== null ? grade.criterion2 : '-'}</td>
+        <td>${grade.criterion3 !== null ? grade.criterion3 : '-'}</td>
+        <td>${grade.criterion4 !== null ? grade.criterion4 : '-'}</td>
+        <td class="text-center fw-bold">${calculateTotal(grade)}</td>
+        `;
+
+        gradesTable.appendChild(tr);
+    });
 }
+
+async function setUpAnnouncementSection() {
+    const generateAnnouncementBtn = document.getElementById('generateAnnouncementBtn');
+    const announcementText = document.getElementById('announcementText');
+    const announcementWarning = document.getElementById('announcementWarning');
+    announcementText.value = '';
+    announcementSection.classList.remove('d-none');
+
+    const date = await checkPresentation();
+    console.log(date);
+
+    // Exit early if presentation data is incomplete
+    if (!date || date.exam_datetime === null || date.exam_mode === null || date.exam_location === null) {
+        announcementText.placeholder = 'Το πεδίο αυτό θα ενεργοποιηθεί αφότου ο φοιτητής ορίσει ημερομηνία εξέτασης.';
+
+        return;
+    }
+
+    announcementText.placeholder = 'Γράψτε εδώ το μήνυμα της ανακοίνωσης και έπειτα πατήστε το κουμπί δημιοσίευσης.';
+
+    // Fetch existing announcement
+    const announcement = await checkAnnouncement();
+    //console.log(announcement);
+
+    if (announcement.announcement_text) {
+        // Pre-fill textarea
+        announcementText.value = announcement.announcement_text;
+
+        // Show warning about overwrite    
+        announcementWarning.textContent =
+            "Προσοχή: " +
+            "Το κείμενο που βλέπετε παραπάνω είναι το τρέχον κείμενο της ανακοίνωσης. " +
+            "Αν αποθηκεύσετε, η παλιά ανακοίνωση θα αντικατασταθεί.";
+
+        generateAnnouncementBtn.textContent = `Επεξεργασία Ανακοίνωσης`;
+        generateAnnouncementBtn.classList.add("btn-outline-primary");
+
+        generateAnnouncementBtn.classList.remove("btn-outline-success");
+
+        announcementWarning.classList.remove('d-none'); // show it
+    } else {
+        announcementWarning.classList.add('d-none'); // hide it if no announcement exists
+    }
+
+    // Enable the button
+    generateAnnouncementBtn.classList.remove('disabled');
+    announcementText.disabled = false;
+
+    // Add event listener
+    generateAnnouncementBtn.addEventListener('click', async () => {
+        try {
+            console.log(announcementText.value);
+            await createPresentationAnnouncement(announcementText.value);
+            showSuccess("Η ανακοίνωση δημιουργήθηκε επιτυχώς");
+        } catch (err) {
+            showError(err.message);
+        }
+    });
+}
+
+
 
 function setUpUnderReview() {
     const viewDraftBtn = document.getElementById('viewDraftBtn');
@@ -211,11 +488,9 @@ function setupEventListeners(thesis) {
             }
         });
     }
-
-    // TODO: Add listeners for notes, grading, under-review actions here
 }
 
-async function setUpSupervisorActionsForActiveThesis(thesisId) {
+async function setUpSupervisorActionsForActiveThesis() {
     try {
         console.log("getting assignment date")
         // Get thesis assignment date
@@ -312,18 +587,6 @@ async function setUpSupervisorActionsForActiveThesis(thesisId) {
         }
     });
     supervisorActionsActive.classList.remove('d-none');
-
-
-    const successModalEl = document.getElementById('successModal');
-    const errorModalEl = document.getElementById('errorModal');
-
-    successModalEl.addEventListener('hidden.bs.modal', () => {
-        location.reload(); // refresh the page when modal is fully hidden
-    });
-
-    errorModalEl.addEventListener('hidden.bs.modal', () => {
-        location.reload(); // refresh the page when modal is fully hidden
-    });
 }
 
 
@@ -556,3 +819,23 @@ function getStatusBadge(status) {
     return badgeMap[status] || `<span class="badge bg-secondary">${status}</span>`;
 }
 
+
+// Calculate average of four criteria
+function calculateTotal(grade) {
+    let totalGrade = 0;
+
+    if (!isNaN(grade.criterion1)) {
+        totalGrade += grade.criterion1 * 0.6;
+    }
+    if (!isNaN(grade.criterion2)) {
+        totalGrade += grade.criterion2 * 0.15;
+    }
+    if (!isNaN(grade.criterion3)) {
+        totalGrade += grade.criterion3 * 0.15;
+    }
+    if (!isNaN(grade.criterion4)) {
+        totalGrade += grade.criterion4 * 0.1;
+    }
+
+    return totalGrade;
+}

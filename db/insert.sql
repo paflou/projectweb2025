@@ -365,92 +365,27 @@ UPDATE thesis SET student_id = 10003 WHERE id = 5; -- completed
 UPDATE thesis SET student_id = 10006 WHERE id = 6; -- under-assignment
 
 
--- =========================================
--- Matching committee invitations (aligned)
--- =========================================
 INSERT INTO committee_invitation (thesis_id, professor_id, status, sent_at, replied_at) VALUES
--- Thesis 1: under-assignment (only member1=103 is fixed, others may still be pending)
-(1, 102, 'pending',  '2025-09-01 10:00:00', NULL),
+-- Thesis 1
+(1, 102, 'pending',  '2025-09-01 10:00:00', '2025-09-02 09:00:00'),
 (1, 103, 'accepted', '2025-09-01 10:00:00', '2025-09-02 09:30:00'),
 
--- Thesis 2: active (members 101 and 146 → must be accepted)
+-- Thesis 2
 (2, 101, 'accepted', '2025-09-01 11:00:00', '2025-09-01 15:45:00'),
 (2, 146, 'accepted', '2025-09-01 11:00:00', '2025-09-01 16:10:00'),
 
--- Thesis 3: under-review (members 101 and 146 → must be accepted)
+-- Thesis 3
 (3, 101, 'accepted', '2025-09-02 12:15:00', '2025-09-02 13:45:00'),
 (3, 146, 'accepted', '2025-09-02 12:15:00', '2025-09-02 14:05:00'),
 
--- Thesis 4: completed (members 102 and 103 → must be accepted)
+-- Thesis 4
 (4, 102, 'accepted', '2025-08-30 09:00:00', '2025-08-30 10:30:00'),
 (4, 103, 'accepted', '2025-08-30 09:00:00', '2025-08-30 11:00:00'),
 
--- Thesis 5: completed (members 102 and 103 → must be accepted)
-(5, 102, 'accepted'),
-(5, 103, 'accepted'),
+-- Thesis 5
+(5, 102, 'accepted', '2025-08-31 10:00:00', '2025-08-31 11:00:00'),
+(5, 103, 'accepted', '2025-08-31 10:00:00', '2025-08-31 11:30:00'),
 
--- Additional committee invitations for new theses
--- Thesis 6: completed (members 102 and 103 → must be accepted)
-(6, 102, 'accepted'),
-(6, 103, 'accepted'),
-
--- Thesis 7: completed (members 146 and 102 → must be accepted)
-(7, 146, 'accepted'),
-(7, 102, 'accepted'),
-
--- Thesis 8: completed (members 103 and 146 → must be accepted)
-(8, 103, 'accepted'),
-(8, 146, 'accepted'),
-
--- Thesis 9: completed (members 101 and 103 → must be accepted)
-(9, 101, 'accepted'),
-(9, 103, 'accepted'),
-
--- Thesis 10: completed (members 101 and 146 → must be accepted)
-(10, 101, 'accepted'),
-(10, 146, 'accepted'),
-
--- Thesis 11: under-review (members 102 and 146 → must be accepted)
-(11, 102, 'accepted'),
-(11, 146, 'accepted'),
-
--- Thesis 12: active (members 103 and 146 → must be accepted)
-(12, 103, 'accepted'),
-(12, 146, 'accepted'),
-
--- Thesis 13: completed (members 101 and 103 → must be accepted)
-(13, 101, 'accepted'),
-(13, 103, 'accepted'),
-
--- Thesis 14: completed (members 101 and 102 → must be accepted)
-(14, 101, 'accepted'),
-(14, 102, 'accepted'),
-
--- Thesis 15: completed (members 101 and 103 → must be accepted)
-(15, 101, 'accepted'),
-(15, 103, 'accepted'),
-
--- New theses for presentation announcements demo
--- Thesis 16: active (members 101 and 102 → must be accepted)
-(16, 101, 'accepted'),
-(16, 102, 'accepted'),
-
--- Thesis 17: under-review (members 102 and 105 → must be accepted)
-(17, 102, 'accepted'),
-(17, 105, 'accepted'),
-
--- Thesis 18: active (members 103 and 106 → must be accepted)
-(18, 103, 'accepted'),
-(18, 106, 'accepted'),
-
--- Thesis 19: under-review (members 104 and 146 → must be accepted)
-(19, 104, 'accepted'),
-(19, 146, 'accepted'),
-
--- Thesis 20: active (members 101 and 103 → must be accepted)
-(20, 101, 'accepted'),
-(20, 103, 'accepted');
-
--- Thesis 5: canceled (members 103 and 146 → must be accepted)
-(6, 103, 'accepted', '2025-08-29 14:20:00', '2025-08-29 15:15:00'),
-(6, 101, 'pending', '2025-08-29 14:20:00', NULL);
+-- Thesis 6
+(6, 102, 'accepted', '2025-08-29 12:00:00', '2025-08-29 13:00:00'),
+(6, 103, 'accepted', '2025-08-29 14:20:00', '2025-08-29 15:15:00');

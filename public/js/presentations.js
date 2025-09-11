@@ -114,7 +114,7 @@ class PresentationsManager {
             return `
                 <tr>
                     <td>
-                        <strong>${this.escapeHtml(presentation.title)}</strong>
+                        <strong>${this.escapeHtml(presentation.thesis_title)}</strong>
                         ${presentation.description ? `<br><small class="text-muted">${this.escapeHtml(presentation.description.substring(0, 100))}${presentation.description.length > 100 ? '...' : ''}</small>` : ''}
                     </td>
                     <td>${this.escapeHtml(presentation.student_name)}</td>

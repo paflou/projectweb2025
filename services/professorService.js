@@ -891,7 +891,7 @@ SELECT
   const conn = await pool.getConnection();
   try {
     const result = await conn.query(sql, params); // Destructure result
-    console.log(result)
+    //console.log(result)
     return result;
   } finally {
     conn.release();
@@ -1106,7 +1106,7 @@ async function getPresentationDate(thesisId, professorId) {
 
   const date = await pool.query(sql, [thesisId, professorId, professorId, professorId]);
 
-  // If no file found 
+  // If no date found 
   if (date.length === 0) {
     return null;
   }
@@ -1206,6 +1206,123 @@ async function getInstructorStatistics(req) {
   }
 }
 
+async function createPresentationAnnouncement(thesisId, text) {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+
+    const sql = `
+      INSERT INTO thesis_announcement (thesis_id, announcement_text)
+      VALUES (?, ?)
+      ON DUPLICATE KEY UPDATE
+      announcement_text = VALUES(announcement_text),
+      created_at = CURRENT_TIMESTAMP;
+    `;
+    const params = [thesisId, text];
+    await conn.query(sql, params);
+
+    return { success: true };
+  } catch (err) {
+    console.error('Error in createPresentationAnnouncement:', err);
+    return { success: false, error: 'Database error' };
+  } finally {
+    if (conn) conn.release();
+  }
+}
+
+async function getPresentationAnnouncement(thesisId) {
+  const sql = `
+    SELECT
+    announcement_text
+    FROM thesis_announcement
+    WHERE thesis_id = ?
+  `;
+
+  const presentation = await pool.query(sql, thesisId);
+
+  // If no presentation found 
+  if (presentation.length === 0) {
+    return null;
+  }
+
+  return presentation[0];
+}
+
+async function enableGrading(thesisId, professorId) {
+  const sql = `
+    UPDATE thesis
+    SET grading_enabled = TRUE
+    WHERE id = ? AND supervisor_id = ?
+  `;
+
+  const response = await pool.query(sql, [thesisId, professorId]);
+
+  if (response.affectedRows === 0) {
+    throw new Error("No thesis found or you are not the supervisor");
+  }
+
+  return true;
+}
+
+async function getGradingStatus(thesisId) {
+  const sql = `
+    SELECT
+    grading_enabled
+    FROM thesis
+    WHERE id = ?
+  `;
+
+  const status = await pool.query(sql, thesisId);
+
+
+  if (status.length === 0) return null;
+
+  return !!status[0].grading_enabled;
+}
+
+async function getGrades(thesisId) {
+  const sql = `
+  SELECT 
+      tg.criterion1,
+      tg.criterion2,
+      tg.criterion3,
+      tg.criterion4,
+      p.name AS professor_name,
+      p.surname AS professor_surname,
+      p.id
+  FROM thesis_grades tg
+  INNER JOIN user p ON tg.professor_id = p.id
+  WHERE tg.thesis_id = ?;
+  `;
+
+  const grades = await pool.query(sql, thesisId);
+
+  //console.log(grades)
+  return grades;
+
+}
+
+async function saveProfessorGrade(professorId, thesisId, data) {
+  try {
+    const sql = `
+      INSERT INTO thesis_grades
+      (thesis_id, professor_id, criterion1,
+      criterion2, criterion3, criterion4)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+    const params = [thesisId, professorId, data.criterion1,
+                    data.criterion2, data.criterion3, data.criterion4];
+
+    await pool.query(sql, params);
+
+    return { success: true };
+  } catch (err) {
+    console.error('Error in saveProfessorGrade:', err);
+    return { success: false, error: 'Database error' };
+  }
+}
+
+
 module.exports = {
   insertThesisToDB,
   getUnderAssignment,
@@ -1234,6 +1351,12 @@ module.exports = {
   getAssignmentDate,
   markUnderReview,
   getDraftFilename,
-  getPresentationDate
+  getPresentationDate,
+  createPresentationAnnouncement,
+  getPresentationAnnouncement,
+  enableGrading,
+  getGradingStatus,
+  getGrades,
+  saveProfessorGrade
 };
 
