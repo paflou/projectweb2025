@@ -15,7 +15,7 @@ const {
   saveFileNameToDB
 } = require("../../services/studentService");
 
-const { getThesisTimeline } = require("../../services/professorService");
+const { getThesisTimeline } = require("../../services/professor/index");
 
 // Route: GET /student/thesis-info
 // Get student's thesis information and status

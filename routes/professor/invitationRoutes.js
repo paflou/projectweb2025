@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../../db/db');
 const checkPermission = require('../../middlewares/checkPermission');
-const professorService = require('../../services/professorService');
+const professorService = require('../../services/professor/index');
 
 const {
   getProfessorInvitations,

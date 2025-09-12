@@ -1,4 +1,4 @@
-const { insertThesisToDB, updateThesis } = require("../services/professorService");
+const { insertThesisToDB, updateThesis } = require("../services/professor/index");
 const handleFileUpload = require("../middlewares/handleFileUpload").handleFileUpload;
 
 // Handles thesis submission, including file upload and database insertion

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { submitThesis } = require("../../controllers/professorController");
 const checkPermission = require('../../middlewares/checkPermission');
-const professorService = require('../../services/professorService');
+const professorService = require('../../services/professor/index');
 const path = require("path");
 const fs = require("fs");
 
