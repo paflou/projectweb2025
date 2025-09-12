@@ -4,9 +4,17 @@ var path = require("path");
 const checkPermission = require("../../middlewares/checkPermission");
 const thesisRoutes = require("./thesisRoutes");
 const invitationRoutes = require("./invitationRoutes");
+const assignmentRoutes = require("./assignmentRoutes");
+const gradingRoutes = require("./gradingRoutes");
+const notesRoutes = require("./notesRoutes");
+const presentationRoutes = require("./presentationRoutes");
 
 router.use(thesisRoutes);
 router.use(invitationRoutes);
+router.use(assignmentRoutes);
+router.use(gradingRoutes);
+router.use(notesRoutes);
+router.use(presentationRoutes);
 
 // Route: /prof/
 

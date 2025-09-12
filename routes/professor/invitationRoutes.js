@@ -8,11 +8,11 @@ const {
   getProfessorInvitations,
   acceptInvitation,
   rejectInvitation,
-  leaveComittee
+  leaveComittee,
+  getThesisInvitations
 } = professorService;
 
-// Route: GET /professor/get-invitations
-// Get committee invitations for the professor
+// Get committee invitations FOR THE PROFESSOR
 router.get('/get-invitations', checkPermission('professor'), async (req, res) => {
   try {
     const invitations = await getProfessorInvitations(req);
@@ -23,6 +23,28 @@ router.get('/get-invitations', checkPermission('professor'), async (req, res) =>
   } catch (err) {
     console.error('Error in /get-invitations:', err);
     res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Get committee invitations FOR THE THESIS
+router.get('/get-thesis-invitations/:id', checkPermission('professor'), async (req, res) => {
+  const thesisId = req.params.id;
+
+  if (!thesisId) {
+    return res.status(400).send('Thesis ID is required');
+  }
+
+  try {
+    const invitations = await getThesisInvitations(thesisId);
+
+    if (!invitations || invitations.length === 0) {
+      return res.json({ invitations: [] });
+    }
+
+    res.json(Array.isArray(invitations) ? invitations : []);
+  } catch (err) {
+    console.error("Error fetching thesis invitations:", err);
+    res.status(500).send('Internal Server Error');
   }
 });
 
