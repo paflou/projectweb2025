@@ -2,6 +2,16 @@ var express = require("express");
 var router = express.Router();
 var path = require("path");
 const checkPermission = require("../../middlewares/checkPermission");
+const formidable = require('formidable');
+const fs = require('fs');
+const { importJsonData } = require("../../services/importService");
+const {
+  getActiveAndUnderReviewTheses,
+  getThesisDetails,
+  recordApNumber,
+  cancelThesisAssignment,
+  markThesisCompleted
+} = require("../../services/secretaryService");
 
 router.get("/", checkPermission('secretary'), (req, res) => {
   res.sendFile(path.join(__dirname, "../../public/secretary/secretary.html"));
@@ -17,6 +27,217 @@ router.get("/input", checkPermission("secretary"), (req, res) => {
 
 router.get("/manage", checkPermission("secretary"), (req, res) => {
   res.sendFile(path.join(__dirname, "../../public/secretary/manage.html"));
+});
+
+// Route to handle JSON file upload and import at /secretary/input
+router.post("/input", checkPermission("secretary"), async (req, res) => {
+  const uploadDir = path.join(process.cwd(), 'uploads/imports');
+
+  // Ensure upload directory exists
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
+  const form = new formidable.IncomingForm({
+    keepExtensions: true,
+    maxFileSize: 10 * 1024 * 1024, // 10MB limit
+    uploadDir: uploadDir
+  });
+
+  try {
+    // Parse the form data using the new formidable v3 API
+    const [fields, files] = await form.parse(req);
+
+    // Get the uploaded file - in formidable v3, files are arrays
+    let file = files.jsonFile;
+    if (Array.isArray(file)) {
+      file = file[0];
+    }
+
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+
+    // Validate file type
+    const filename = file.originalFilename || file.name || '';
+    if (!filename.toLowerCase().endsWith('.json')) {
+      // Clean up uploaded file
+      fs.unlinkSync(file.filepath);
+      return res.status(400).json({
+        success: false,
+        message: 'Only JSON files are allowed'
+      });
+    }
+
+    // Read and parse JSON file
+    const fileContent = fs.readFileSync(file.filepath, 'utf8');
+    let jsonData;
+
+    try {
+      jsonData = JSON.parse(fileContent);
+    } catch (parseError) {
+      // Clean up uploaded file
+      fs.unlinkSync(file.filepath);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid JSON format: ' + parseError.message
+      });
+    }
+
+    // Import the data
+    const importResult = await importJsonData(jsonData);
+
+    // Clean up uploaded file
+    fs.unlinkSync(file.filepath);
+
+    // Return the result
+    res.json(importResult);
+
+  } catch (error) {
+    console.error('Import error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during import: ' + error.message
+    });
+  }
+});
+
+router.get("/manage", checkPermission("secretary"), (req, res) => {
+  res.sendFile(path.join(__dirname, "../../public/secretary/manage.html"));
+});
+
+// API Routes for thesis data
+
+// Custom authentication middleware for API routes that returns JSON instead of redirect
+function checkSecretaryApiPermission(req, res, next) {
+  if (req.session.userId === null || req.session.userId === undefined) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  if (req.session.role !== 'secretary') {
+    return res.status(403).json({ error: 'Secretary access required' });
+  }
+  next();
+}
+
+// Get all active and under-review theses
+router.get("/api/theses", checkSecretaryApiPermission, async (req, res) => {
+  try {
+    const theses = await getActiveAndUnderReviewTheses();
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify({ theses }, (_, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    ));
+  } catch (err) {
+    console.error('Error in /api/theses:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Get detailed information for a specific thesis
+router.get("/api/thesis/:id", checkSecretaryApiPermission, async (req, res) => {
+  try {
+    const thesisId = parseInt(req.params.id);
+    if (isNaN(thesisId)) {
+      return res.status(400).json({ error: 'Invalid thesis ID' });
+    }
+
+    const thesis = await getThesisDetails(thesisId);
+    if (!thesis) {
+      return res.status(404).json({ error: 'Thesis not found' });
+    }
+
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify({ thesis }, (_, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    ));
+  } catch (err) {
+    console.error('Error in /api/thesis/:id:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Record AP number for active thesis
+router.post("/api/thesis/:id/record-ap", checkSecretaryApiPermission, async (req, res) => {
+  try {
+    const thesisId = parseInt(req.params.id);
+    const { apNumber, apYear } = req.body;
+
+    if (isNaN(thesisId)) {
+      return res.status(400).json({ error: 'Invalid thesis ID' });
+    }
+
+    if (!apNumber || !apYear) {
+      return res.status(400).json({ error: 'AP number and year are required' });
+    }
+
+    const result = await recordApNumber(thesisId, apNumber, parseInt(apYear));
+
+    if (result.success) {
+      res.status(200).json({ message: result.message });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /api/thesis/:id/record-ap:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Cancel thesis assignment
+router.post("/api/thesis/:id/cancel", checkSecretaryApiPermission, async (req, res) => {
+  try {
+    const thesisId = parseInt(req.params.id);
+    const { cancellationApNumber, cancellationApYear, cancellationReason } = req.body;
+
+    if (isNaN(thesisId)) {
+      return res.status(400).json({ error: 'Invalid thesis ID' });
+    }
+
+    if (!cancellationApNumber || !cancellationApYear || !cancellationReason) {
+      return res.status(400).json({ error: 'Cancellation AP number, year, and reason are required' });
+    }
+
+    const result = await cancelThesisAssignment(
+      thesisId,
+      cancellationApNumber,
+      parseInt(cancellationApYear),
+      cancellationReason
+    );
+
+    if (result.success) {
+      res.status(200).json({ message: result.message });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /api/thesis/:id/cancel:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Mark thesis as completed
+router.post("/api/thesis/:id/complete", checkSecretaryApiPermission, async (req, res) => {
+  try {
+    const thesisId = parseInt(req.params.id);
+
+    if (isNaN(thesisId)) {
+      return res.status(400).json({ error: 'Invalid thesis ID' });
+    }
+
+    const result = await markThesisCompleted(thesisId);
+
+    if (result.success) {
+      res.status(200).json({ message: result.message });
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+  } catch (err) {
+    console.error('Error in /api/thesis/:id/complete:', err);
+    res.status(500).json({ error: 'Server Error' });
+  }
 });
 
 module.exports = router;

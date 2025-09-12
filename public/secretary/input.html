@@ -1,25 +1,356 @@
 <!doctype html>
 <html lang="el">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link href="/stylesheets/style.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous" />
-    <title>Create new Thesis</title>
+    <title>Εισαγωγή Δεδομένων - Secretary</title>
+    <style>
+        .drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+
+        .file-info {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+
+        .import-results {
+            margin-top: 20px;
+        }
+
+        .error-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .loading-spinner {
+            display: none;
+        }
+    </style>
 </head>
 
 <body id="body" class="d-flex flex-column min-vh-100">
     <div id="navbar"></div>
 
-    <main class="flex-grow-1">
+    <main class="flex-grow-1 container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <h2 class="text-center mb-4">Εισαγωγή Δεδομένων από JSON</h2>
+
+                <!-- Instructions Card -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Οδηγίες</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Μπορείτε να εισάγετε δεδομένα φοιτητών και καθηγητών από αρχείο JSON. Το αρχείο πρέπει να έχει την ακόλουθη δομή:</p>
+                        <pre class="bg-light p-3 rounded"><code>{
+  "students": [
+    {
+      "name": "Όνομα",
+      "surname": "Επώνυμο",
+      "student_number": "1043XXXX",
+      "email": "email@students.upatras.gr",
+      "username": "username",
+      "password": "password",
+      "street": "Οδός",
+      "number": "Αριθμός",
+      "city": "Πόλη",
+      "postcode": "ΤΚ",
+      "father_name": "Πατρώνυμο",
+      "landline_telephone": "2610XXXXXX",
+      "mobile_telephone": "69XXXXXXXX"
+    }
+  ],
+  "professors": [
+    {
+      "name": "Όνομα",
+      "surname": "Επώνυμο",
+      "email": "email@ceid.upatras.gr",
+      "username": "username",
+      "password": "password",
+      "topic": "Ειδικότητα",
+      "department": "Τμήμα",
+      "university": "Πανεπιστήμιο",
+      "landline": "2610XXXXXX",
+      "mobile": "69XXXXXXXX"
+    }
+  ]
+}</code></pre>
+                        <div class="alert alert-info mt-3">
+                            <strong>Σημείωση:</strong> Τα πεδία που είναι υποχρεωτικά είναι: name, surname, email για όλους, student_number για φοιτητές, και topic, department, university για καθηγητές.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upload Form -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Επιλογή Αρχείου</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="importForm" enctype="multipart/form-data">
+                            <div class="drop-zone" id="dropZone">
+                                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                <p class="mb-2">Σύρετε και αφήστε το JSON αρχείο εδώ ή κάντε κλικ για επιλογή</p>
+                                <input type="file" id="fileInput" name="jsonFile" accept=".json" style="display: none;">
+                                <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">
+                                    Επιλογή Αρχείου
+                                </button>
+                            </div>
+
+                            <div id="fileInfo" class="file-info" style="display: none;">
+                                <strong>Επιλεγμένο αρχείο:</strong> <span id="fileName"></span>
+                                <br>
+                                <strong>Μέγεθος:</strong> <span id="fileSize"></span>
+                            </div>
+
+                            <div class="text-center mt-3">
+                                <button type="submit" id="importBtn" class="btn btn-success" disabled>
+                                    <span class="loading-spinner spinner-border spinner-border-sm me-2" role="status"></span>
+                                    Εισαγωγή Δεδομένων
+                                </button>
+                                <button type="button" class="btn btn-secondary ms-2" onclick="resetForm()">
+                                    Επαναφορά
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div id="resultsSection" class="import-results" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Αποτελέσματα Εισαγωγής</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="importSummary"></div>
+                            <div id="importDetails" class="mt-3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <div id="footer"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous">
-        </script>
+    </script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <script src="/js/loadPartials.js"></script>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const importBtn = document.getElementById('importBtn');
+        const importForm = document.getElementById('importForm');
+        const resultsSection = document.getElementById('resultsSection');
+        const loadingSpinner = document.querySelector('.loading-spinner');
+
+        // Drag and drop functionality
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelection(files[0]);
+            }
+        });
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelection(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelection(file) {
+            if (!file.name.toLowerCase().endsWith('.json')) {
+                alert('Παρακαλώ επιλέξτε ένα JSON αρχείο.');
+                return;
+            }
+
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.style.display = 'block';
+            importBtn.disabled = false;
+            resultsSection.style.display = 'none';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function resetForm() {
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+            importBtn.disabled = true;
+            resultsSection.style.display = 'none';
+            dropZone.classList.remove('dragover');
+        }
+
+        // Form submission
+        importForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!fileInput.files[0]) {
+                alert('Παρακαλώ επιλέξτε ένα αρχείο.');
+                return;
+            }
+
+            // Show loading state
+            importBtn.disabled = true;
+            loadingSpinner.style.display = 'inline-block';
+            importBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Εισαγωγή σε εξέλιξη...';
+
+            const formData = new FormData();
+            formData.append('jsonFile', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/secretary/input', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                displayResults(result);
+
+            } catch (error) {
+                console.error('Import error:', error);
+                displayResults({
+                    success: false,
+                    message: 'Σφάλμα κατά την εισαγωγή: ' + error.message
+                });
+            } finally {
+                // Reset button state
+                importBtn.disabled = false;
+                loadingSpinner.style.display = 'none';
+                importBtn.innerHTML = 'Εισαγωγή Δεδομένων';
+            }
+        });
+
+        function displayResults(result) {
+            const summaryDiv = document.getElementById('importSummary');
+            const detailsDiv = document.getElementById('importDetails');
+
+            if (result.success) {
+                summaryDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-check-circle"></i> ${result.message}</h6>
+                        ${result.summary ? `
+                            <p class="mb-0">
+                                <strong>Επιτυχείς:</strong> ${result.summary.totalSuccess} |
+                                <strong>Αποτυχίες:</strong> ${result.summary.totalFailed}
+                            </p>
+                        ` : ''}
+                    </div>
+                `;
+
+                if (result.results) {
+                    let detailsHtml = '<div class="row">';
+
+                    if (result.results.students) {
+                        detailsHtml += `
+                            <div class="col-md-6">
+                                <h6>Φοιτητές</h6>
+                                <p>Επιτυχείς: ${result.results.students.success}</p>
+                                <p>Αποτυχίες: ${result.results.students.failed}</p>
+                            </div>
+                        `;
+                    }
+
+                    if (result.results.professors) {
+                        detailsHtml += `
+                            <div class="col-md-6">
+                                <h6>Καθηγητές</h6>
+                                <p>Επιτυχείς: ${result.results.professors.success}</p>
+                                <p>Αποτυχίες: ${result.results.professors.failed}</p>
+                            </div>
+                        `;
+                    }
+
+                    detailsHtml += '</div>';
+                    detailsDiv.innerHTML = detailsHtml;
+                }
+            } else {
+                summaryDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h6><i class="fas fa-exclamation-triangle"></i> ${result.message}</h6>
+                    </div>
+                `;
+                detailsDiv.innerHTML = '';
+            }
+
+            // Display errors if any
+            if (result.errors && result.errors.length > 0) {
+                const errorsHtml = `
+                    <div class="mt-3">
+                        <h6>Σφάλματα:</h6>
+                        <div class="error-list alert alert-warning">
+                            <ul class="mb-0">
+                                ${result.errors.map(error => `<li>${error}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                detailsDiv.innerHTML += errorsHtml;
+            }
+
+            if (result.summary && result.summary.errors && result.summary.errors.length > 0) {
+                const errorsHtml = `
+                    <div class="mt-3">
+                        <h6>Σφάλματα:</h6>
+                        <div class="error-list alert alert-warning">
+                            <ul class="mb-0">
+                                ${result.summary.errors.map(error => `<li>${error}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                detailsDiv.innerHTML += errorsHtml;
+            }
+
+            resultsSection.style.display = 'block';
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
 </body>
+
 </html>

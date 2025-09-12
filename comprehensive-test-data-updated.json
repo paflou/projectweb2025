@@ -1,0 +1,141 @@
+{
+  "students": [
+    {
+      "name": "Αλέξανδρος",
+      "surname": "Παπαδόπουλος",
+      "student_number": "10435001",
+      "email": "st10435001@upnet.gr",
+      "username": "alexandros_papadopoulos",
+      "password": "123",
+      "street": "Κορίνθου",
+      "number": "123",
+      "city": "Πάτρα",
+      "postcode": "26441",
+      "father_name": "Γιάννης",
+      "landline_telephone": "2610123456",
+      "mobile_telephone": "6912345678"
+    },
+    {
+      "name": "Μαρία",
+      "surname": "Γεωργίου",
+      "student_number": "10435002",
+      "email": "st10435002@upnet.gr",
+      "username": "maria_georgiou",
+      "password": "123",
+      "street": "Ρήγα Φεραίου",
+      "number": "45",
+      "city": "Πάτρα",
+      "postcode": "26221",
+      "father_name": "Κώστας",
+      "landline_telephone": "2610987654",
+      "mobile_telephone": "6987654321"
+    },
+    {
+      "name": "Δημήτρης",
+      "surname": "Κωνσταντίνου",
+      "student_number": "10435003",
+      "email": "st10435003@upnet.gr",
+      "username": "dimitris_konstantinou",
+      "password": "123",
+      "street": "Αγίου Ανδρέα",
+      "number": "67",
+      "city": "Πάτρα",
+      "postcode": "26335",
+      "father_name": "Νίκος",
+      "landline_telephone": "2610555666",
+      "mobile_telephone": "6955566677"
+    },
+    {
+      "name": "Ελένη",
+      "surname": "Αντωνίου",
+      "student_number": "10435004",
+      "email": "st10435004@upnet.gr",
+      "username": "eleni_antoniou",
+      "password": "123",
+      "street": "Μαιάνδρου",
+      "number": "12",
+      "city": "Πάτρα",
+      "postcode": "26442",
+      "father_name": "Πέτρος",
+      "landline_telephone": "2610777888",
+      "mobile_telephone": "6977788899"
+    },
+    {
+      "name": "Γιάννης",
+      "surname": "Νικολάου",
+      "student_number": "10435005",
+      "email": "st10435005@upnet.gr",
+      "username": "giannis_nikolaou",
+      "password": "123",
+      "street": "Κολοκοτρώνη",
+      "number": "89",
+      "city": "Πάτρα",
+      "postcode": "26223",
+      "father_name": "Αντώνης",
+      "landline_telephone": "2610333444",
+      "mobile_telephone": "6933344455"
+    }
+  ],
+  "professors": [
+    {
+      "name": "Ιωάννης",
+      "surname": "Αντωνίου",
+      "email": "iantoniu@ceid.upatras.gr",
+      "username": "ioannis_antoniou",
+      "password": "123",
+      "topic": "Τεχνητή Νοημοσύνη",
+      "department": "CEID",
+      "university": "Πανεπιστήμιο Πατρών",
+      "landline": "2610996800",
+      "mobile": "6977123456"
+    },
+    {
+      "name": "Μαρία",
+      "surname": "Παπαδάκη",
+      "email": "mpapadaki@ceid.upatras.gr",
+      "username": "maria_papadaki",
+      "password": "123",
+      "topic": "Βάσεις Δεδομένων",
+      "department": "CEID",
+      "university": "Πανεπιστήμιο Πατρών",
+      "landline": "2610996801",
+      "mobile": "6977234567"
+    },
+    {
+      "name": "Κωνσταντίνος",
+      "surname": "Γεωργίου",
+      "email": "kgeorgiou@ceid.upatras.gr",
+      "username": "konstantinos_georgiou",
+      "password": "123",
+      "topic": "Δίκτυα Υπολογιστών",
+      "department": "CEID",
+      "university": "Πανεπιστήμιο Πατρών",
+      "landline": "2610996802",
+      "mobile": "6977345678"
+    },
+    {
+      "name": "Ελένη",
+      "surname": "Δημητρίου",
+      "email": "edimitriou@ceid.upatras.gr",
+      "username": "eleni_dimitriou",
+      "password": "123",
+      "topic": "Αλγόριθμοι και Πολυπλοκότητα",
+      "department": "CEID",
+      "university": "Πανεπιστήμιο Πατρών",
+      "landline": "2610996803",
+      "mobile": "6977456789"
+    },
+    {
+      "name": "Νικόλαος",
+      "surname": "Κωνσταντίνου",
+      "email": "nkonstantinou@ceid.upatras.gr",
+      "username": "nikolaos_konstantinou",
+      "password": "123",
+      "topic": "Λειτουργικά Συστήματα",
+      "department": "CEID",
+      "university": "Πανεπιστήμιο Πατρών",
+      "landline": "2610996804",
+      "mobile": "6977567890"
+    }
+  ]
+}

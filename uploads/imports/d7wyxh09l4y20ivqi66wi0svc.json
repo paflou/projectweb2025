@@ -1,0 +1,65 @@
+{
+  "students": [
+    {
+      "name": "Αλέξανδρος",
+      "surname": "Παπαδόπουλος",
+      "student_number": "10435001",
+      "email": "st10435001@upnet.gr",
+      "street": "Κορίνθου",
+      "number": "123",
+      "city": "Πάτρα",
+      "postcode": "26441",
+      "father_name": "Γιάννης",
+      "landline_telephone": "2610123456",
+      "mobile_telephone": "6912345678"
+    },
+    {
+      "name": "Μαρία",
+      "surname": "Γεωργίου",
+      "student_number": "10435002",
+      "email": "st10435002@upnet.gr",
+      "street": "Ρήγα Φεραίου",
+      "number": "45",
+      "city": "Πάτρα",
+      "postcode": "26221",
+      "father_name": "Κώστας",
+      "landline_telephone": "2610987654",
+      "mobile_telephone": "6987654321"
+    },
+    {
+      "name": "Δημήτρης",
+      "surname": "Κωνσταντίνου",
+      "student_number": "10435003",
+      "email": "st10435003@upnet.gr",
+      "street": "Αγίου Ανδρέα",
+      "number": "67",
+      "city": "Πάτρα",
+      "postcode": "26335",
+      "father_name": "Νίκος",
+      "landline_telephone": "2610555666",
+      "mobile_telephone": "6955566677"
+    }
+  ],
+  "professors": [
+    {
+      "name": "Ιωάννης",
+      "surname": "Αντωνίου",
+      "email": "iantoniu@ceid.upatras.gr",
+      "topic": "Τεχνητή Νοημοσύνη",
+      "department": "CEID",
+      "university": "Πανεπιστήμιο Πατρών",
+      "landline": "2610996800",
+      "mobile": "6977123456"
+    },
+    {
+      "name": "Ελένη",
+      "surname": "Μιχαηλίδου",
+      "email": "emichail@ceid.upatras.gr",
+      "topic": "Βάσεις Δεδομένων",
+      "department": "CEID",
+      "university": "Πανεπιστήμιο Πατρών",
+      "landline": "2610996801",
+      "mobile": "6977654321"
+    }
+  ]
+}
