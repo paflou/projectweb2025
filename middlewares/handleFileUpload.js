@@ -5,7 +5,7 @@ const path = require('path');
 
 const {
   saveFileNameToDB
-} = require("../services/studentService");
+} = require("../services/student/index");
 // Combine these 2 functions at some point
 
 // Function to handle thesis file upload

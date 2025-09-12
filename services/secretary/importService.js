@@ -1,4 +1,4 @@
-const pool = require('../db/db');
+const pool = require('../../db/db');
 
 /**
  * Service for importing student and instructor data from JSON files

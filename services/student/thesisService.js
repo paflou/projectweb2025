@@ -1,4 +1,4 @@
-const pool = require("../db/db");
+const pool = require("../../db/db");
 
 
 // Save filename to DB
@@ -15,86 +15,6 @@ async function saveFileNameToDB(userId, filename) {
     await conn.query(sql, params);
   } finally {
     conn.release();
-  }
-}
-
-// Function to update student information in the database
-async function updateStudentInformation(data, userId) {
-  // SQL query to update user and student tables using INNER JOIN
-  const sql = `
-    UPDATE user INNER JOIN student ON user.id = student.id
-    SET
-      user.email = ?,
-      user.mobile = ?,
-      user.landline = ?,
-      student.street = ?,
-      student.street_number = ?,
-      student.city = ?,
-      student.postcode = ?
-    WHERE user.id = ?
-  `;
-  // Prepare parameters for the SQL query
-  const params = [
-    data.email,
-    data.mobile,
-    data.landline,
-    data.street,
-    data.streetNumber,
-    data.city,
-    data.postcode,
-    userId
-  ];
-  // Get a connection from the pool
-  const conn = await pool.getConnection();
-  try {
-    // Execute the update query
-    const rows = await conn.query(sql, params);
-    conn.release();
-
-    // Return the result if update was successful
-    if (rows.length > 0) {
-      return rows[0];
-    } else {
-      return null;
-    }
-  } catch (err) {
-    // Release the connection and log error if something goes wrong
-    conn.release();
-    console.error('Error in POST /get-info:', err);
-    throw err; // Let the route handler respond
-  }
-}
-
-
-// Function to fetch student information from the database
-async function getStudentInformation(req) {
-  // SQL query to select user and student fields by user ID
-  const sql = `
-    SELECT email, landline, mobile, street, street_number, postcode, city
-    FROM user
-    INNER JOIN student ON user.id = student.id
-    WHERE user.id = ?
-  `;
-
-  // Use the userId from the session as the query parameter
-  const params = [req.session.userId];
-  // Get a connection from the pool
-  const conn = await pool.getConnection();
-  try {
-    // Execute the query
-    const rows = await conn.query(sql, params);
-    conn.release();
-
-    // Return the first row if found, otherwise null
-    if (rows.length > 0) {
-      return rows[0];
-    } else {
-      return null;
-    }
-  } catch (err) {
-    // Release the connection and propagate the error
-    conn.release();
-    throw err;
   }
 }
 
@@ -279,144 +199,6 @@ async function getDetailedThesisInfo(req) {
   }
 }
 
-// Function to get committee status
-async function getCommitteeStatus(thesisId) {
-  const sql = `
-    SELECT
-      ci.id,
-      ci.status,
-      u.name,
-      u.surname,
-      p.topic,
-      p.department
-    FROM committee_invitation ci
-    INNER JOIN professor p ON ci.professor_id = p.id
-    INNER JOIN user u ON p.id = u.id
-    WHERE ci.thesis_id = ?
-    ORDER BY ci.sent_at DESC
-  `;
-
-  const params = [thesisId];
-  console.log(sql, params)
-  const conn = await pool.getConnection();
-  try {
-    const rows = await conn.query(sql, params);
-    conn.release();
-
-    const members = rows.filter(row => row.status === 'accepted');
-    const pending = rows.filter(row => row.status === 'pending');
-
-    return { members, pending };
-  } catch (err) {
-    conn.release();
-    throw err;
-  }
-}
-
-// Function to search professors
-async function searchProfessors(query) {
-  const sql = `
-    SELECT
-      u.id,
-      u.name,
-      u.surname,
-      p.topic,
-      p.department,
-      p.university
-    FROM user u
-    INNER JOIN professor p ON u.id = p.id
-    WHERE
-      u.name LIKE ? OR
-      u.surname LIKE ? OR
-      CONCAT(u.name, ' ', u.surname) LIKE ? OR
-      p.topic LIKE ? OR
-      p.department LIKE ?
-    ORDER BY u.surname, u.name
-    LIMIT 10
-  `;
-
-  const searchPattern = `%${query}%`;
-  const params = [searchPattern, searchPattern, searchPattern, searchPattern, searchPattern];
-
-  const conn = await pool.getConnection();
-  try {
-    const rows = await conn.query(sql, params);
-    conn.release();
-    return rows || [];
-  } catch (err) {
-    conn.release();
-    throw err;
-  }
-}
-
-// Function to invite professor to committee
-async function inviteProfessor(req, professorId, message) {
-  const conn = await pool.getConnection();
-
-  try {
-    await conn.beginTransaction();
-
-    // Get student's thesis
-    const thesisInfo = await getThesisInfo(req);
-    if (!thesisInfo) {
-      await conn.rollback();
-      conn.release();
-      return { success: false, error: 'No thesis found for student' };
-    }
-
-    // Check if professor is already invited or is the supervisor
-    const checkSql = `
-      SELECT COUNT(*) AS count 
-      FROM committee_invitation
-      WHERE thesis_id = ? 
-        AND professor_id = ?
-        AND status IN ('pending','accepted')
-
-      UNION ALL
-
-      SELECT COUNT(*) AS count 
-      FROM thesis
-      WHERE id = ? 
-      AND supervisor_id = ?;
-    `;
-    const checkRows = await conn.query(checkSql, [thesisInfo.id, professorId, thesisInfo.id, professorId]);
-
-    if (checkRows.some(row => row.count > 0)) {
-      await conn.rollback();
-      conn.release();
-      return { success: false, error: 'Ο καθηγητής είναι ήδη μέρος της επιτροπής.' };
-    }
-
-    // Check if already have 2 accepted invitations
-    const acceptedSql = `
-      SELECT COUNT(*) as count FROM committee_invitation
-      WHERE thesis_id = ? AND status = 'accepted'
-    `;
-    const acceptedRows = await conn.query(acceptedSql, [thesisInfo.id]);
-
-    if (acceptedRows[0].count >= 2) {
-      await conn.rollback();
-      conn.release();
-      return { success: false, error: 'Η επιτροπή περιέχει ήδη 3 καθηγητές' };
-    }
-
-    // Insert invitation
-    const insertSql = `
-      INSERT INTO committee_invitation (thesis_id, professor_id, status, sent_at)
-      VALUES (?, ?, 'pending', NOW())
-    `;
-    await conn.query(insertSql, [thesisInfo.id, professorId]);
-
-    await conn.commit();
-    conn.release();
-    return { success: true };
-
-  } catch (err) {
-    await conn.rollback();
-    conn.release();
-    throw err;
-  }
-}
 
 // Function to add material link
 async function addMaterialLink(req, title, url) {
@@ -479,6 +261,7 @@ async function saveExamDetails(req, examDetails) {
   }
 }
 
+
 // Function to save repository link
 async function saveRepositoryLink(req, repositoryLink) {
   const conn = await pool.getConnection();
@@ -507,37 +290,12 @@ async function saveRepositoryLink(req, repositoryLink) {
   }
 }
 
-// Function to cancel pending invitations when thesis becomes active
-async function cancelPendingInvitations(thesisId) {
-  const conn = await pool.getConnection();
-
-  try {
-    const cancelSql = `
-      UPDATE committee_invitation
-      SET status = 'cancelled'
-      WHERE thesis_id = ? AND status = 'pending'
-    `;
-    await conn.query(cancelSql, [thesisId]);
-    conn.release();
-    return { success: true };
-
-  } catch (err) {
-    conn.release();
-    throw err;
-  }
-}
 
 module.exports = {
   saveFileNameToDB,
-  getStudentInformation,
-  updateStudentInformation,
   getThesisInfo,
   getDetailedThesisInfo,
-  getCommitteeStatus,
-  searchProfessors,
-  inviteProfessor,
   addMaterialLink,
   saveExamDetails,
-  saveRepositoryLink,
-  cancelPendingInvitations
+  saveRepositoryLink
 };

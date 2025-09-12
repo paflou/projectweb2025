@@ -7,7 +7,7 @@ const {
   inviteProfessor,
   cancelPendingInvitations,
   getStudentThesisInfo
-} = require("../../services/studentService");
+} = require("../../services/student/index");
 const checkPermission = require("../../middlewares/checkPermission");
 
 

@@ -4,14 +4,14 @@ var path = require("path");
 const checkPermission = require("../../middlewares/checkPermission");
 const formidable = require('formidable');
 const fs = require('fs');
-const { importJsonData } = require("../../services/importService");
+const { importJsonData } = require("../../services/secretary/importService");
 const {
   getActiveAndUnderReviewTheses,
   getThesisDetails,
   recordApNumber,
   cancelThesisAssignment,
   markThesisCompleted
-} = require("../../services/secretaryService");
+} = require("../../services/secretary/secretaryService");
 
 router.get("/", checkPermission('secretary'), (req, res) => {
   res.sendFile(path.join(__dirname, "../../public/secretary/secretary.html"));

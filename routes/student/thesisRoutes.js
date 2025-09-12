@@ -13,7 +13,7 @@ const {
   saveExamDetails,
   saveRepositoryLink,
   saveFileNameToDB
-} = require("../../services/studentService");
+} = require("../../services/student/index");
 
 const { getThesisTimeline } = require("../../services/professor/index");
 

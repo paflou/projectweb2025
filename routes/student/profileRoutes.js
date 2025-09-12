@@ -6,7 +6,7 @@ const checkPermission = require("../../middlewares/checkPermission");
 const {
   getStudentInformation,
   updateStudentInformation
-} = require("../../services/studentService");
+} = require("../../services/student/index");
 
 // Route: GET /student/get-info
 // Fetch and return the student's information as JSON

@@ -4,7 +4,7 @@ var path = require("path");
 const checkPermission = require("../../middlewares/checkPermission");
 const {
   getThesisInfo,
-} = require("../../services/studentService");
+} = require("../../services/student/index");
 
 const thesisRoutes = require("./thesisRoutes");
 const invitationRoutes = require("./invitationRoutes");
