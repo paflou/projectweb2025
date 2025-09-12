@@ -147,7 +147,7 @@
 
                 <!-- Υπό Εξέταση Section -->
                 <div id="underReviewSection" class="card mb-4 d-none">
-                    <div  class="card-header bg-primary text-white">
+                    <div class="card-header bg-primary text-white">
                         <h5 id="underReviewTitle" class="mb-0">
                             <i class="bi bi-search me-2"></i>
                             Υπό Εξέταση
@@ -167,7 +167,7 @@
                         </div>
 
                         <!-- Presentation Announcement -->
-                        <div id="announcementSection" class="mb-4">
+                        <div id="announcementSection" class="mb-4 d-none">
                             <h6 class="text-primary">
                                 <i class="bi bi-megaphone me-2"></i>Ανακοίνωση Παρουσίασης
                             </h6>
@@ -241,60 +241,6 @@
                         </div>
 
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- INPUT GRADE MODAL -->
-        <div class="modal fade" id="gradeModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-
-                    <div class="modal-header bg-primary text-white">
-                        <h5 class="modal-title">
-                            <i class="bi bi-bar-chart-steps me-2"></i>Καταχώρηση Βαθμού
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-
-                    <div class="modal-body">
-                        <p class="text-muted">
-                            Η δημόσια παρουσίαση και εξέταση της Δ.Ε. αξιολογείται από την εξεταστική επιτροπή βάσει
-                            των παρακάτω κριτηρίων:
-                        </p>
-                        <form id="gradeForm">
-                            <div class="mb-3">
-                                <label class="form-label">Ποιότητα Δ.Ε. και επίτευξη στόχων. (60%)</label>
-                                <input type="number" class="form-control grade-input" id="criterion1" min="0" max="10"
-                                    step="0.1" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Χρονικό διάστημα εκπόνησης. (15%)</label>
-                                <input type="number" class="form-control grade-input" id="criterion2" min="0" max="10"
-                                    step="0.1" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Ποιότητα και πληρότητα κειμένου/παραδοτέων. (15%)</label>
-                                <input type="number" class="form-control grade-input" id="criterion3" min="0" max="10"
-                                    step="0.1" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Συνολική εικόνα παρουσίασης (10%)</label>
-                                <input type="number" class="form-control grade-input" id="criterion4" min="0" max="10"
-                                    step="0.1" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Συνολικός Βαθμός</label>
-                                <input type="number" class="form-control" id="totalGrade" readonly>
-                            </div>
-                        </form>
-                    </div>
-
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Άκυρο</button>
-                        <button type="button" class="btn btn-primary" id="saveGradeBtn">Αποθήκευση</button>
-                    </div>
-
                 </div>
             </div>
         </div>

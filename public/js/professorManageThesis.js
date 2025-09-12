@@ -216,10 +216,13 @@ async function renderSections(thesis) {
             setUpUnderReview();
 
             const gradingEnabled = await checkGrading();
+            const presentation = await checkPresentation();
+            const now = new Date();
 
             if (role === 'supervisor') {
                 setUpAnnouncementSection();
-                if (gradingEnabled.status === false) setUpGradingSection();
+                //REMOVE THE DATE FOR THE PRESENTATION FOR THE WALKTHROUGH
+                if (gradingEnabled.status === false && presentation.datetime < now) setUpGradingSection();
             }
             else {
                 const gradingNotEnabledNotice = document.getElementById('gradingNotEnabledNotice');
@@ -449,8 +452,6 @@ async function setUpAnnouncementSection() {
         }
     });
 }
-
-
 
 function setUpUnderReview() {
     const viewDraftBtn = document.getElementById('viewDraftBtn');

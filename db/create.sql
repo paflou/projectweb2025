@@ -354,13 +354,3 @@ BEGIN
         WHERE id = NEW.thesis_id;
     END IF;
 END;
-
-CREATE TRIGGER mark_thesis_completed
-BEFORE UPDATE ON thesis
-FOR EACH ROW
-BEGIN
-    -- Only act if grade was previously NULL and now is NOT NULL
-    IF OLD.grade IS NULL AND NEW.grade IS NOT NULL THEN
-        SET NEW.thesis_status = 'completed';
-    END IF;
-END;
