@@ -426,47 +426,30 @@ async function cancelActiveThesisAssignment(req, thesisId, assemblyNumber, assem
   try {
     await conn.beginTransaction();
 
-    // 1. Check if thesis exists and is active
-    const checkThesisSql = `
-      SELECT id, title, student_id
-      FROM thesis
-      WHERE id = ? AND supervisor_id = ? AND thesis_status = 'active'
-    `;
-    const thesisRows = await conn.query(checkThesisSql, [thesisId, req.session.userId]);
-    console.log('DEBUG checkThesisSql result:', thesisRows);
-
-    if (!thesisRows || thesisRows.length === 0) {
-      await conn.rollback();
-      conn.release();
-      return { success: false, error: 'Thesis not found or not available for cancellation' };
-    }
-
-    const thesis = thesisRows[0];
-
-    if (thesis.student_id === null) {
-      await conn.rollback();
-      conn.release();
-      return { success: false, error: 'Thesis is not currently assigned to any student' };
-    }
-
-    // 2. Delete committee invitations
-    const deleteInvitationsSql = `
-      DELETE FROM committee_invitation
-      WHERE thesis_id = ?
-    `;
-    await conn.query(deleteInvitationsSql, [thesisId]);
-
-    // 3. Update thesis to unassign student and reset members
+    // 1. Update thesis to clear student/member assignments & record cancellation AP info
     const updateSql = `
-      UPDATE thesis
-      SET 
-        student_id = NULL,
-        member1_id = NULL,
-        member2_id = NULL,
-        thesis_status = 'under-assignment'
-      WHERE id = ? AND supervisor_id = ?
-    `;
-    const updateResult = await conn.query(updateSql, [thesisId, req.session.userId]);
+    UPDATE thesis
+    SET 
+      student_id = NULL,
+      member1_id = NULL,
+      member2_id = NULL,
+      thesis_status = 'under-assignment',
+      cancellation_ap_number = ?,    
+      cancellation_ap_year = ?,      
+      cancellation_reason = ?,       
+      cancellation_date = NOW()      
+    WHERE id = ? AND supervisor_id = ?
+  `;
+
+    const logReason = `Unassigned by supervisor (Γ.Σ. ${assemblyNumber}/${assemblyYear})`;
+
+    const updateResult = await conn.query(updateSql, [
+      assemblyNumber,
+      assemblyYear,
+      logReason,
+      thesisId,
+      req.session.userId
+    ]);
 
     if (!updateResult || updateResult.affectedRows === 0) {
       await conn.rollback();
@@ -474,26 +457,26 @@ async function cancelActiveThesisAssignment(req, thesisId, assemblyNumber, assem
       return { success: false, error: 'Failed to cancel assignment' };
     }
 
-    // 4. Insert a log entry in thesis_log
+    // 2. Insert into thesis_log
     const insertLogSql = `
-      INSERT INTO thesis_log (thesis_id, user_id, user_role, action)
-      VALUES (?, ?, 'supervisor', ?)
-    `;
-    const logReason = `Unassigned by supervisor (Γ.Σ. ${assemblyNumber}/${assemblyYear})`;
-    console.log(logReason)
+    INSERT INTO thesis_log (thesis_id, user_id, user_role, action)
+    VALUES (?, ?, 'supervisor', ?)
+  `;
     await conn.query(insertLogSql, [thesisId, req.session.userId, logReason]);
 
+    // 3. Commit transaction
     await conn.commit();
     conn.release();
 
-    return { success: true };
+    return { success: true, message: 'Assignment successfully canceled' };
 
   } catch (err) {
     await conn.rollback();
     conn.release();
-    console.error('Error in cancelThesisAssignment:', err);
-    throw err;
+    console.error(err);
+    return { success: false, error: 'Unexpected error occurred' };
   }
+
 }
 
 // Function to get professor invitations
@@ -1311,7 +1294,7 @@ async function saveProfessorGrade(professorId, thesisId, data) {
       VALUES (?, ?, ?, ?, ?, ?)
     `;
     const params = [thesisId, professorId, data.criterion1,
-                    data.criterion2, data.criterion3, data.criterion4];
+      data.criterion2, data.criterion3, data.criterion4];
 
     await pool.query(sql, params);
 
