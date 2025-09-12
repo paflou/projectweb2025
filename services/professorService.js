@@ -357,7 +357,8 @@ async function assignThesisToStudent(req, thesisId, studentId) {
   }
 }
 
-async function cancelThesisAssignment(req, thesisId) {
+
+async function cancelThesisUnderAssignment(req, thesisId) {
   const conn = await pool.getConnection();
 
   try {
@@ -405,6 +406,82 @@ async function cancelThesisAssignment(req, thesisId) {
       conn.release();
       return { success: false, error: 'Failed to cancel assignment' };
     }
+
+    await conn.commit();
+    conn.release();
+
+    return { success: true };
+
+  } catch (err) {
+    await conn.rollback();
+    conn.release();
+    console.error('Error in cancelThesisAssignment:', err);
+    throw err;
+  }
+}
+
+async function cancelActiveThesisAssignment(req, thesisId, assemblyNumber, assemblyYear) {
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    // 1. Check if thesis exists and is active
+    const checkThesisSql = `
+      SELECT id, title, student_id
+      FROM thesis
+      WHERE id = ? AND supervisor_id = ? AND thesis_status = 'active'
+    `;
+    const thesisRows = await conn.query(checkThesisSql, [thesisId, req.session.userId]);
+    console.log('DEBUG checkThesisSql result:', thesisRows);
+
+    if (!thesisRows || thesisRows.length === 0) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Thesis not found or not available for cancellation' };
+    }
+
+    const thesis = thesisRows[0];
+
+    if (thesis.student_id === null) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Thesis is not currently assigned to any student' };
+    }
+
+    // 2. Delete committee invitations
+    const deleteInvitationsSql = `
+      DELETE FROM committee_invitation
+      WHERE thesis_id = ?
+    `;
+    await conn.query(deleteInvitationsSql, [thesisId]);
+
+    // 3. Update thesis to unassign student and reset members
+    const updateSql = `
+      UPDATE thesis
+      SET 
+        student_id = NULL,
+        member1_id = NULL,
+        member2_id = NULL,
+        thesis_status = 'under-assignment'
+      WHERE id = ? AND supervisor_id = ?
+    `;
+    const updateResult = await conn.query(updateSql, [thesisId, req.session.userId]);
+
+    if (!updateResult || updateResult.affectedRows === 0) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Failed to cancel assignment' };
+    }
+
+    // 4. Insert a log entry in thesis_log
+    const insertLogSql = `
+      INSERT INTO thesis_log (thesis_id, user_id, user_role, action)
+      VALUES (?, ?, 'supervisor', ?)
+    `;
+    const logReason = `Unassigned by supervisor (Γ.Σ. ${assemblyNumber}/${assemblyYear})`;
+    console.log(logReason)
+    await conn.query(insertLogSql, [thesisId, req.session.userId, logReason]);
 
     await conn.commit();
     conn.release();
@@ -725,6 +802,319 @@ async function deleteThesis(thesisId, supervisorId) {
   }
 }
 
+async function getSpecificThesis(thesisId, professorId) {
+  const sql = `
+    SELECT
+      t.id,
+      t.title,
+      t.description,
+      t.pdf,
+      t.thesis_status AS status,
+      t.final_repository_link,
+      CONCAT(s.name, ' ', s.surname) AS student_name,
+      CONCAT(p.name, ' ', p.surname) AS supervisor_name,
+      CONCAT(c1.name, ' ', c1.surname) AS member1_name,
+      CONCAT(c2.name, ' ', c2.surname) AS member2_name,
+      CASE
+          WHEN t.supervisor_id = ? THEN 'supervisor'
+          WHEN t.member1_id = ? OR member2_id = ? THEN 'committee'
+          WHEN t.student_id = ? THEN 'student'
+          ELSE 'unknown'
+      END AS user_role
+  FROM thesis AS t
+  LEFT JOIN user AS s ON t.student_id = s.id
+  LEFT JOIN user AS c1 ON t.member1_id = c1.id
+  LEFT JOIN user AS c2 ON t.member2_id = c2.id
+  LEFT JOIN user AS p ON t.supervisor_id = p.id
+  WHERE t.id = ? AND ? IN (supervisor_id, member1_id, member2_id, student_id);
+  `;
+
+
+  const params = [professorId, professorId, professorId, professorId, thesisId, professorId];
+  // Get a connection from the pool
+  const conn = await pool.getConnection();
+  try {
+    // Execute the query
+    const rows = await conn.query(sql, params);
+    conn.release();
+
+    // Return the first row if found, otherwise null
+    if (rows.length > 0) {
+      //console.log(rows)
+      return rows[0];
+    } else {
+      return null;
+    }
+  } catch (err) {
+    // Release the connection and propagate the error
+    conn.release();
+    throw err;
+  }
+}
+
+async function getThesisInvitations(thesisId) {
+  const sql =
+    `
+SELECT 
+    CONCAT(u.name, ' ', u.surname) AS professor_name,
+    c.status,
+    c.sent_at,
+    c.replied_at
+FROM committee_invitation AS c
+INNER JOIN user AS u ON u.id = c.professor_id
+WHERE c.thesis_id = ?
+ORDER BY c.sent_at DESC;
+
+  `
+  const params = [thesisId];
+
+  const conn = await pool.getConnection();
+  try {
+    const result = await conn.query(sql, params); // Destructure result
+    console.log(result)
+    return result;
+  } finally {
+    conn.release();
+  }
+}
+
+async function getProfessorNotesForThesis(professorId, thesisId) {
+  const sql =
+    `
+SELECT 
+    id, note
+    FROM professor_notes
+    WHERE thesis_id = ? AND professor_id = ?;
+  `
+  const params = [thesisId, professorId];
+
+  const conn = await pool.getConnection();
+  try {
+    const result = await conn.query(sql, params); // Destructure result
+    //console.log(result)
+    return result;
+  } finally {
+    conn.release();
+  }
+}
+
+async function addNoteForThesis(professorId, thesisId, text) {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+
+    const sql = `
+      INSERT INTO professor_notes (thesis_id, professor_id, note)
+      VALUES (?, ?, ?)
+    `;
+    const params = [thesisId, professorId, text.trim()];
+
+    await conn.query(sql, params);
+
+    return { success: true };
+  } catch (err) {
+    console.error('Error in addNoteForThesis:', err);
+    return { success: false, error: 'Database error' };
+  } finally {
+    if (conn) conn.release();
+  }
+}
+
+async function editNote(noteId, professorId, text) {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const sql = `
+            UPDATE professor_notes
+            SET note = ?
+            WHERE id = ? AND professor_id = ?
+        `;
+    const result = await conn.query(sql, [text.trim(), noteId, professorId]);
+    if (result.affectedRows === 0) {
+      return { success: false, error: 'Note not found or not allowed to edit.' };
+    }
+    return { success: true };
+  } catch (err) {
+    console.error('Error in editNote:', err);
+    return { success: false, error: 'Database error' };
+  } finally {
+    if (conn) conn.release();
+  }
+}
+
+async function deleteNote(noteId, professorId) {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const sql = `
+            DELETE FROM professor_notes
+            WHERE id = ? AND professor_id = ?
+        `;
+    const result = await conn.query(sql, [noteId, professorId]);
+    if (result.affectedRows === 0) {
+      return { success: false, error: 'Note not found or not allowed to delete.' };
+    }
+    return { success: true };
+  } catch (err) {
+    console.error('Error in deleteNote:', err);
+    return { success: false, error: 'Database error' };
+  } finally {
+    if (conn) conn.release();
+  }
+}
+
+async function getProfessorRole(thesisId, professorId) {
+  const sql = `
+        SELECT 
+            CASE
+                WHEN supervisor_id = ? THEN 'supervisor'
+                WHEN member1_id = ? OR member2_id = ? THEN 'member'
+                ELSE NULL
+            END AS role
+        FROM thesis
+        WHERE id = ?;
+    `;
+
+  const rows = await pool.query(sql, [professorId, professorId, professorId, thesisId]);
+  console.log(rows)
+  // If no thesis found or professor not related
+  if (rows.length === 0 || !rows[0].role) {
+    return null;
+  }
+
+  return rows[0].role;
+}
+
+async function getAssignmentDate(thesisId) {
+  const sql = `
+        SELECT 
+          created_at
+        FROM thesis_log
+        WHERE thesis_id = ? AND action = 'assigned'
+        ORDER BY created_at DESC LIMIT 1;
+    `;
+
+  const rows = await pool.query(sql, thesisId);
+  console.log(rows)
+  // If no thesis found or professor not related
+  if (rows.length === 0) {
+    return null;
+  }
+
+  return rows[0].created_at;
+}
+
+async function markUnderReview(professorId, thesisId) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // 1. Check the role of the user for this thesis
+    const roleSql = `
+            SELECT 
+                CASE
+                    WHEN supervisor_id = ? THEN 'supervisor'
+                    WHEN member1_id = ? OR member2_id = ? THEN 'member'
+                    ELSE NULL
+                END AS role
+            FROM thesis
+            WHERE id = ?;
+        `;
+    const rows = await conn.query(roleSql, [professorId, professorId, professorId, thesisId]);
+
+    if (!rows || rows.length === 0 || !rows[0].role) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'You are not authorized to update this thesis' };
+    }
+
+    if (rows[0].role !== 'supervisor') {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Only supervisors can mark under review' };
+    }
+
+    // 2. Update thesis status
+    const updateSql = `
+            UPDATE thesis
+            SET thesis_status = 'under-review'
+            WHERE id = ?;
+        `;
+    const updateResult = await conn.query(updateSql, [thesisId]);
+
+    if (!updateResult || updateResult.affectedRows === 0) {
+      await conn.rollback();
+      conn.release();
+      return { success: false, error: 'Failed to update thesis status' };
+    }
+
+    // 3. Log the action
+    const logSql = `
+            INSERT INTO thesis_log (thesis_id, user_id, user_role, action)
+            VALUES (?, ?, 'supervisor', 'marked as under review');
+        `;
+    await conn.query(logSql, [thesisId, professorId]);
+
+    await conn.commit();
+    conn.release();
+    return { success: true };
+  } catch (err) {
+    await conn.rollback();
+    conn.release();
+    console.error('Error in markUnderReview:', err);
+    return { success: false, error: 'Server error' };
+  }
+}
+
+
+async function getDraftFilename(thesisId, professorId) {
+  const sql = `
+    SELECT draft
+    FROM thesis
+    WHERE id = ?
+      AND (
+        supervisor_id = ? 
+        OR member1_id = ? 
+        OR member2_id = ?
+      );
+  `;
+
+  const filename = await pool.query(sql, [thesisId, professorId, professorId, professorId]);
+
+  // If no file found 
+  if (filename.length === 0) {
+    return null;
+  }
+
+  return filename[0].draft;
+}
+
+async function getPresentationDate(thesisId, professorId) {
+  const sql = `
+    SELECT
+    exam_datetime,
+    exam_mode,
+    exam_location
+    FROM thesis
+    WHERE id = ?
+      AND (
+        supervisor_id = ? 
+        OR member1_id = ? 
+        OR member2_id = ?
+      );
+  `;
+
+  const date = await pool.query(sql, [thesisId, professorId, professorId, professorId]);
+
+  // If no date found 
+  if (date.length === 0) {
+    return null;
+  }
+
+  return date[0];
+}
+
+
 // Function to get statistics for instructor (both supervised and committee member theses)
 async function getInstructorStatistics(req) {
   const professorId = req.session.userId;
@@ -816,6 +1206,123 @@ async function getInstructorStatistics(req) {
   }
 }
 
+async function createPresentationAnnouncement(thesisId, text) {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+
+    const sql = `
+      INSERT INTO thesis_announcement (thesis_id, announcement_text)
+      VALUES (?, ?)
+      ON DUPLICATE KEY UPDATE
+      announcement_text = VALUES(announcement_text),
+      created_at = CURRENT_TIMESTAMP;
+    `;
+    const params = [thesisId, text];
+    await conn.query(sql, params);
+
+    return { success: true };
+  } catch (err) {
+    console.error('Error in createPresentationAnnouncement:', err);
+    return { success: false, error: 'Database error' };
+  } finally {
+    if (conn) conn.release();
+  }
+}
+
+async function getPresentationAnnouncement(thesisId) {
+  const sql = `
+    SELECT
+    announcement_text
+    FROM thesis_announcement
+    WHERE thesis_id = ?
+  `;
+
+  const presentation = await pool.query(sql, thesisId);
+
+  // If no presentation found 
+  if (presentation.length === 0) {
+    return null;
+  }
+
+  return presentation[0];
+}
+
+async function enableGrading(thesisId, professorId) {
+  const sql = `
+    UPDATE thesis
+    SET grading_enabled = TRUE
+    WHERE id = ? AND supervisor_id = ?
+  `;
+
+  const response = await pool.query(sql, [thesisId, professorId]);
+
+  if (response.affectedRows === 0) {
+    throw new Error("No thesis found or you are not the supervisor");
+  }
+
+  return true;
+}
+
+async function getGradingStatus(thesisId) {
+  const sql = `
+    SELECT
+    grading_enabled
+    FROM thesis
+    WHERE id = ?
+  `;
+
+  const status = await pool.query(sql, thesisId);
+
+
+  if (status.length === 0) return null;
+
+  return !!status[0].grading_enabled;
+}
+
+async function getGrades(thesisId) {
+  const sql = `
+  SELECT 
+      tg.criterion1,
+      tg.criterion2,
+      tg.criterion3,
+      tg.criterion4,
+      p.name AS professor_name,
+      p.surname AS professor_surname,
+      p.id
+  FROM thesis_grades tg
+  INNER JOIN user p ON tg.professor_id = p.id
+  WHERE tg.thesis_id = ?;
+  `;
+
+  const grades = await pool.query(sql, thesisId);
+
+  //console.log(grades)
+  return grades;
+
+}
+
+async function saveProfessorGrade(professorId, thesisId, data) {
+  try {
+    const sql = `
+      INSERT INTO thesis_grades
+      (thesis_id, professor_id, criterion1,
+      criterion2, criterion3, criterion4)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+    const params = [thesisId, professorId, data.criterion1,
+                    data.criterion2, data.criterion3, data.criterion4];
+
+    await pool.query(sql, params);
+
+    return { success: true };
+  } catch (err) {
+    console.error('Error in saveProfessorGrade:', err);
+    return { success: false, error: 'Database error' };
+  }
+}
+
+
 module.exports = {
   insertThesisToDB,
   getUnderAssignment,
@@ -824,7 +1331,8 @@ module.exports = {
   getAvailableTopics,
   assignThesisToStudent,
   getTemporaryAssignments,
-  cancelThesisAssignment,
+  cancelActiveThesisAssignment,
+  cancelThesisUnderAssignment,
   updateThesis,
   getProfessorInvitations,
   acceptInvitation,
@@ -832,6 +1340,23 @@ module.exports = {
   leaveComittee,
   getThesisTimeline,
   deleteThesis,
-  getInstructorStatistics
+  getInstructorStatistics,
+  getSpecificThesis,
+  getThesisInvitations,
+  getProfessorNotesForThesis,
+  addNoteForThesis,
+  editNote,
+  deleteNote,
+  getProfessorRole,
+  getAssignmentDate,
+  markUnderReview,
+  getDraftFilename,
+  getPresentationDate,
+  createPresentationAnnouncement,
+  getPresentationAnnouncement,
+  enableGrading,
+  getGradingStatus,
+  getGrades,
+  saveProfessorGrade
 };
 

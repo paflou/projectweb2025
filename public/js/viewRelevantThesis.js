@@ -210,7 +210,7 @@ async function goToThesisManagementPage(thesis) {
     }
 
     // Redirect to management page
-    window.location.href = `/prof/manage-thesis/${thesis.id}`;
+    window.location.href = `/prof/manage/${thesis.id}`;
 }
 
 // Export data

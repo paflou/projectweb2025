@@ -34,7 +34,7 @@ router.get('/get-info', checkPermission('student'), async (req, res) => {
 
 // Route: POST /student/get-info
 // Update the student's information after authenticating the user
-router.post('/get-info', checkPermission('student'), async (req, res) => {
+router.put('/put-info', checkPermission('student'), async (req, res) => {
   // Destructure the fields from the request body
   const {
     email,

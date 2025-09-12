@@ -75,6 +75,9 @@ CREATE TABLE IF NOT EXISTS thesis (
     
     -- Grade between 0 and 10, with two decimal places
     grade DECIMAL(4, 2) CHECK (grade >= 0 AND grade <= 10),
+    
+    grading_enabled BOOLEAN DEFAULT FALSE,
+
 
     -- Secretary management fields
     ap_number VARCHAR(50), -- AP number from General Assembly for topic assignment approval
@@ -91,6 +94,28 @@ CREATE TABLE IF NOT EXISTS thesis (
     CONSTRAINT thesis_member1 FOREIGN KEY (member1_id) REFERENCES professor(id) ON DELETE SET NULL ON UPDATE SET NULL,
     CONSTRAINT thesis_member2 FOREIGN KEY (member2_id) REFERENCES professor(id) ON DELETE SET NULL ON UPDATE SET NULL,
     CONSTRAINT thesis_student FOREIGN KEY (student_id) REFERENCES student(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS thesis_grades (
+    id INT AUTO_INCREMENT,
+    thesis_id INT NOT NULL,
+    professor_id INT NOT NULL,
+    
+    -- Four criteria (0-10 each)
+    criterion1 DECIMAL(4, 2) NOT NULL CHECK (criterion1 >= 0 AND criterion1 <= 10),
+    criterion2 DECIMAL(4, 2) NOT NULL CHECK (criterion2 >= 0 AND criterion2 <= 10),
+    criterion3 DECIMAL(4, 2) NOT NULL CHECK (criterion3 >= 0 AND criterion3 <= 10),
+    criterion4 DECIMAL(4, 2) NOT NULL CHECK (criterion4 >= 0 AND criterion4 <= 10),
+    
+    submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    PRIMARY KEY (id),
+
+    -- Prevent the same professor from grading the same thesis twice
+    UNIQUE (thesis_id, professor_id),
+
+    FOREIGN KEY (thesis_id) REFERENCES thesis(id) ON DELETE CASCADE,
+    FOREIGN KEY (professor_id) REFERENCES professor(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS additional_thesis_material (
@@ -110,6 +135,64 @@ CREATE TABLE IF NOT EXISTS thesis_log (
     CONSTRAINT log_thesis_fk FOREIGN KEY (thesis_id) REFERENCES thesis(id) ON DELETE CASCADE,
     CONSTRAINT log_user_fk FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE
 );
+
+CREATE TABLE
+    IF NOT EXISTS committee_invitation (
+        id INT AUTO_INCREMENT,
+        thesis_id INT NOT NULL,
+        professor_id INT NOT NULL,
+        status ENUM ('pending', 'accepted', 'rejected') DEFAULT 'pending',
+        sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        replied_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+        PRIMARY KEY (id),
+        CONSTRAINT invitation_thesis FOREIGN KEY (thesis_id) REFERENCES thesis (id) ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT invitation_professor FOREIGN KEY (professor_id) REFERENCES professor (id) ON DELETE CASCADE ON UPDATE CASCADE
+    );
+
+CREATE TABLE IF NOT EXISTS professor_notes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    thesis_id INT NOT NULL,
+    professor_id INT,
+    note VARCHAR(300),
+    
+    CONSTRAINT professor_fk FOREIGN KEY (professor_id) REFERENCES professor(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT thesis_fk FOREIGN KEY (thesis_id) REFERENCES thesis(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS thesis_announcement (
+    id INT AUTO_INCREMENT,
+    thesis_id INT NOT NULL UNIQUE,
+    announcement_text TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    PRIMARY KEY (id),
+    
+    -- Foreign key to thesis
+    CONSTRAINT announcement_thesis FOREIGN KEY (thesis_id)
+        REFERENCES thesis(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+
+CREATE TRIGGER check_professor_allowed
+BEFORE INSERT ON thesis_grades
+FOR EACH ROW
+BEGIN
+    DECLARE allowed_count INT;
+
+    SELECT COUNT(*) INTO allowed_count
+    FROM thesis
+    WHERE id = NEW.thesis_id
+      AND (supervisor_id = NEW.professor_id
+           OR member1_id = NEW.professor_id
+           OR member2_id = NEW.professor_id);
+
+    IF allowed_count = 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Professor is not allowed to grade this thesis';
+    END IF;
+END;
 
 CREATE TRIGGER log_thesis_creation
 AFTER INSERT ON thesis
@@ -143,18 +226,6 @@ BEGIN
         SET action_type = 'assignment_cancelled';
         SET user_role = 'supervisor';
         SET user_id = NEW.supervisor_id;
-
-    -- Committee member 1 accepted invitation
-    ELSEIF OLD.member1_id IS NULL AND NEW.member1_id IS NOT NULL THEN
-        SET action_type = 'invitation_accepted';
-        SET user_role = 'member';
-        SET user_id = NEW.member1_id;
-
-    -- Committee member 2 accepted invitation
-    ELSEIF OLD.member2_id IS NULL AND NEW.member2_id IS NOT NULL THEN
-        SET action_type = 'invitation_accepted';
-        SET user_role = 'member';
-        SET user_id = NEW.member2_id;
 
     -- Committee member 1 left
     ELSEIF OLD.member1_id IS NOT NULL AND NEW.member1_id IS NULL THEN
@@ -208,17 +279,30 @@ BEGIN
     END IF;
 END;
 
-CREATE TABLE
-    IF NOT EXISTS committee_invitation (
-        id INT AUTO_INCREMENT,
-        thesis_id INT NOT NULL,
-        professor_id INT NOT NULL,
-        status ENUM ('pending', 'accepted', 'rejected') DEFAULT 'pending',
-        sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (id),
-        CONSTRAINT invitation_thesis FOREIGN KEY (thesis_id) REFERENCES thesis (id) ON DELETE CASCADE ON UPDATE CASCADE,
-        CONSTRAINT invitation_professor FOREIGN KEY (professor_id) REFERENCES professor (id) ON DELETE CASCADE ON UPDATE CASCADE
-    );
+
+CREATE TRIGGER log_invitation_sent
+AFTER INSERT ON committee_invitation
+FOR EACH ROW
+BEGIN
+    INSERT INTO thesis_log (thesis_id, user_id, user_role, action)
+    VALUES (NEW.thesis_id, NEW.professor_id, 'student', 'invitation_sent');
+END;
+
+CREATE TRIGGER log_invitation_status_change
+AFTER UPDATE ON committee_invitation
+FOR EACH ROW
+BEGIN
+    -- Only act if the status has actually changed
+    IF NEW.status <> OLD.status THEN
+        IF NEW.status = 'accepted' THEN
+            INSERT INTO thesis_log (thesis_id, user_id, user_role, action)
+            VALUES (NEW.thesis_id, NEW.professor_id, 'member', 'Invitation_accepted');
+        ELSEIF NEW.status = 'rejected' THEN
+            INSERT INTO thesis_log (thesis_id, user_id, user_role, action)
+            VALUES (NEW.thesis_id, NEW.professor_id, 'member', 'Invitation_declined');
+        END IF;
+    END IF;
+END;
 
 -- Trigger to update thesis status and cancel pending invitations when two committee members accept
 CREATE TRIGGER update_thesis_status_on_acceptance
@@ -240,5 +324,43 @@ BEGIN
             WHERE id = NEW.thesis_id AND thesis_status = 'under-assignment';
 
         END IF;
+    END IF;
+END;
+
+CREATE TRIGGER update_thesis_final_grade
+AFTER INSERT ON thesis_grades
+FOR EACH ROW
+BEGIN
+    DECLARE grade_count INT;
+
+    -- Count how many professors have graded this thesis
+    SELECT COUNT(DISTINCT professor_id) INTO grade_count
+    FROM thesis_grades
+    WHERE thesis_id = NEW.thesis_id;
+
+    -- Only update the thesis grade if 3 professors have graded
+    IF grade_count = 3 THEN
+        UPDATE thesis
+        SET grade = (
+            SELECT AVG(
+                criterion1 * 0.60 +
+                criterion2 * 0.15 +
+                criterion3 * 0.15 +
+                criterion4 * 0.10
+            )
+            FROM thesis_grades
+            WHERE thesis_id = NEW.thesis_id
+        )
+        WHERE id = NEW.thesis_id;
+    END IF;
+END;
+
+CREATE TRIGGER mark_thesis_completed
+BEFORE UPDATE ON thesis
+FOR EACH ROW
+BEGIN
+    -- Only act if grade was previously NULL and now is NOT NULL
+    IF OLD.grade IS NULL AND NEW.grade IS NOT NULL THEN
+        SET NEW.thesis_status = 'completed';
     END IF;
 END;

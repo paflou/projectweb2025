@@ -34,10 +34,9 @@ router.get("/stats", checkPermission("professor"), (req, res) => {
   res.sendFile(path.join(__dirname, "../../public/professor/statistics.html"));
 });
 
-router.get("/manage", checkPermission("professor"), (req, res) => {
-  res.sendFile(path.join(__dirname, "../../public/professor/manage.html"));
+router.get(['/manage', '/manage/:id'], checkPermission('professor'), (req, res) => {
+  res.sendFile(path.join(__dirname, '../../public/professor/manage.html'));
 });
-
 
 module.exports = router;
 
