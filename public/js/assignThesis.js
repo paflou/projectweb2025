@@ -342,7 +342,7 @@ async function handleAssignment() {
     }
 
     // Show confirmation dialog
-    const confirmed = confirm(
+    const confirmed = await showConfirm(
         `Θέλετε να αναθέσετε το θέμα "${selectedTopic.title}" στον φοιτητή ${selectedStudent.name} ${selectedStudent.surname} (ΑΜ: ${selectedStudent.student_number});`
     );
 

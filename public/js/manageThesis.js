@@ -92,8 +92,8 @@ function initializeEventListeners() {
     }
 
     if (removeThesisBtn) {
-        removeThesisBtn.addEventListener('click', () => {
-            if (confirm('Είστε σίγουροι ότι θέλετε να αφαιρέσετε το τρέχον αρχείο διπλωματικής;')) {
+        removeThesisBtn.addEventListener('click', async () => {
+            if (await showConfirm('Είστε σίγουροι ότι θέλετε να αφαιρέσετε το τρέχον αρχείο διπλωματικής;')) {
                 removeCurrentDraft();
             }
         });
@@ -659,11 +659,11 @@ function displayMaterialLinks(links) {
 
     // delete button listeners
     document.querySelectorAll('.delete-link-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
+        btn.addEventListener('click', async function () {
             const id = this.getAttribute('data-id');
             //console.log('Delete link with id:', id);
 
-            if (confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον σύνδεσμο;')) {
+            if (await showConfirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον σύνδεσμο;')) {
                 // Call delete API
                 fetch(`/student/material-links/${id}`, {
                     method: 'DELETE',

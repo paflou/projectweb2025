@@ -86,7 +86,7 @@ router.put('/cancel-under-assignment/:thesisId', checkPermission('professor'), a
       res.status(400).json({ error: result.error });
     }
   } catch (err) {
-    console.error('Error in /cancel-assignment:', err);
+    console.error('Error in /cancel-under-assignment:', err);
     res.status(500).json({ error: 'Server Error' });
   }
 });

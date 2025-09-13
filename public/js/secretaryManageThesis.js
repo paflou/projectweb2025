@@ -542,7 +542,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Confirm cancellation
-        if (!confirm('Είστε σίγουροι ότι θέλετε να ακυρώσετε την ανάθεση αυτής της διπλωματικής εργασίας;')) {
+        if (!(await showConfirm('Είστε σίγουροι ότι θέλετε να ακυρώσετε την ανάθεση αυτής της διπλωματικής εργασίας;'))) {
             return;
         }
 
@@ -579,7 +579,7 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     async function handleCompleteThesis() {
         // Confirm completion
-        if (!confirm('Είστε σίγουροι ότι θέλετε να ολοκληρώσετε αυτή τη διπλωματική εργασία;')) {
+        if (!(await showConfirm('Είστε σίγουροι ότι θέλετε να ολοκληρώσετε αυτή τη διπλωματική εργασία;'))) {
             return;
         }
 

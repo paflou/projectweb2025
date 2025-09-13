@@ -5,7 +5,7 @@ USE diplomaDB;
 
 CREATE TABLE
     IF NOT EXISTS user (
-        id INT,
+        id INT NOT NULL,
         username VARCHAR(255),
         password VARCHAR(255) NOT NULL,
         name VARCHAR(50),
@@ -19,7 +19,7 @@ CREATE TABLE
 
 CREATE TABLE
     IF NOT EXISTS professor (
-        id INT,
+        id INT NOT NULL,
         topic VARCHAR(255),
         department VARCHAR(250),
         university VARCHAR(250),
@@ -29,7 +29,7 @@ CREATE TABLE
 
 CREATE TABLE
     IF NOT EXISTS student (
-        id INT,
+        id INT NOT NULL,
         student_number INT,
         street VARCHAR(50),
         street_number INT,

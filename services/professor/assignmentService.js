@@ -250,7 +250,6 @@ async function assignThesisToStudent(req, thesisId, studentId) {
   }
 }
 
-
 async function getAssignmentDate(thesisId) {
   const sql = `
         SELECT 
@@ -269,6 +268,7 @@ async function getAssignmentDate(thesisId) {
 
   return rows[0].created_at;
 }
+
 // We assume when a thesis under assignment gets cancelled there's no general assembly required
 async function cancelThesisUnderAssignment(req, thesisId) {
     const conn = await pool.getConnection();

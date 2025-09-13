@@ -1,4 +1,7 @@
-// === General Elements ===
+// =======================
+// 1. Constants & DOM Elements
+// =======================
+
 const loadingState = document.getElementById('loadingState');
 const noThesisState = document.getElementById('noThesisState');
 const thesisManagementCard = document.getElementById('thesisManagementCard');
@@ -15,28 +18,27 @@ const member2Name = document.getElementById('member2Name');
 // === Sections ===
 const pendingAssignmentSection = document.getElementById('pendingAssignmentSection');
 const committeeInvitationsTable = document.getElementById('committeeInvitationsTable');
-const cancelAssignmentBtn = document.getElementById('cancelAssignmentBtn');
-
 const activeThesisSection = document.getElementById('activeThesisSection');
+const underReviewSection = document.getElementById('underReviewSection');
+const announcementSection = document.getElementById('announcementSection');
+
+const cancelAssignmentBtn = document.getElementById('cancelAssignmentBtn');
+const addNoteBtn = document.getElementById('addNoteBtn');
+const markAsUnderReviewBtn = document.getElementById('markAsUnderReviewBtn');
+const cancelAfter2YearsBtn = document.getElementById('cancelAfter2YearsBtn');
+const viewDraftBtn = document.getElementById('viewDraftBtn');
+
+
 const notesList = document.getElementById('notesList');
 const newNoteInput = document.getElementById('newNoteInput');
-const addNoteBtn = document.getElementById('addNoteBtn');
 const supervisorActionsActive = document.getElementById('supervisorActionsActive');
-const cancelAfter2YearsBtn = document.getElementById('cancelAfter2YearsBtn');
 const cancelAfter2YearsDesc = document.getElementById('cancelAfter2YearsDesc');
-
-const markAsUnderReviewBtn = document.getElementById('markAsUnderReviewBtn');
-
-const underReviewSection = document.getElementById('underReviewSection');
-const viewDraftBtn = document.getElementById('viewDraftBtn');
-const announcementSection = document.getElementById('announcementSection');
 
 const gradingSection = document.getElementById('gradingSection');
 const gradesTable = document.getElementById('gradesTable');
 
 
 const cancelAssignmentModal = document.getElementById('cancelAssignmentModal');
-const confirmCancelBtn = document.getElementById('confirmCancelBtn');
 const assemblyYearField = document.getElementById('assemblyYear');
 const assemblyNumberField = document.getElementById('assemblyNumber');
 
@@ -45,38 +47,56 @@ const openGradeModalBtn = document.getElementById('openGradeModalBtn');
 const gradeModalEl = document.getElementById('gradeModal');
 const gradeModal = new bootstrap.Modal(gradeModalEl);
 
-
 const thesisId = window.location.pathname.split('/').pop();
 
 
-// === Page Initialization ===
-document.addEventListener('DOMContentLoaded', async () => {
-    await initializePage();
-});
+// 2. Utility Functions
+// =======================
+// =======================
 
-openGradeModalBtn.addEventListener('click', () => {
-    gradeModal.show();
-    document.getElementById('gradeForm').reset();
-    document.getElementById('totalGrade').value = '';
-});
-
-async function initializePage() {
-    try {
-        const thesis = await fetchThesisData();
-        if (!thesis) return showNoThesisState();
-
-        hideLoading();
-        renderThesisDetails(thesis);
-        renderSections(thesis);
-        setupEventListeners(thesis);
-    } catch (err) {
-        console.error('Error initializing page:', err);
-        showNoThesisState();
-    }
+function getStatusText(status) {
+    const statusMap = {
+        'under-assignment': 'Υπό Ανάθεση',
+        'active': 'Ενεργή',
+        'under-review': 'Υπό Εξέταση',
+        'completed': 'Ολοκληρωμένη',
+        'cancelled': 'Ακυρωμένη'
+    };
+    return statusMap[status] || status;
 }
 
+function getStatusBadge(status) {
+    const badgeMap = {
+        accepted: '<span class="badge bg-success">Αποδεκτή</span>',
+        pending: '<span class="badge bg-warning">Εκκρεμεί</span>',
+        rejected: '<span class="badge bg-danger">Απορριφθείσα</span>'
+    };
+    return badgeMap[status] || `<span class="badge bg-secondary">${status}</span>`;
+}
 
-// === Data Fetching ===
+function calculateTotal(grade) {
+    let totalGrade = 0;
+
+    if (!isNaN(grade.criterion1)) {
+        totalGrade += grade.criterion1 * 0.6;
+    }
+    if (!isNaN(grade.criterion2)) {
+        totalGrade += grade.criterion2 * 0.15;
+    }
+    if (!isNaN(grade.criterion3)) {
+        totalGrade += grade.criterion3 * 0.15;
+    }
+    if (!isNaN(grade.criterion4)) {
+        totalGrade += grade.criterion4 * 0.1;
+    }
+
+    return totalGrade;
+}
+
+// 3. Data/API Functions
+// =======================
+// =======================
+
 async function fetchThesisData() {
     const response = await fetch(`/prof/get-specific-thesis/${thesisId}`);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -161,39 +181,141 @@ async function saveGrade(data) {
     return await response.json();
 }
 
-// === DOM Rendering ===
+async function cancelAssignment(id) {
+    const response = await fetch(`/prof/cancel-under-assignment/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' }
+    });
+
+    let data;
+    try {
+        data = await response.json();
+    } catch (err) {
+        console.error("Error parsing JSON:", err);
+        throw new Error("Invalid JSON response from server");
+    }
+
+    if (!response.ok) {
+        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+    }
+
+    showSuccess('Η ανάθεση ακυρώθηκε επιτυχώς!');
+}
+
+async function checkRole(thesisId) {
+    try {
+        const response = await fetch(`/prof/check-professor-role/${thesisId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        }
+
+        return data.role;
+    } catch (err) {
+        console.error("Error finding professor role:", err);
+        alert("Υπήρξε σφάλμα.");
+    }
+}
+
+async function deleteNote(noteId) {
+    if (!(await showConfirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή τη σημείωση;'))) return;
+
+    try {
+        const response = await fetch('/prof/delete-thesis-note', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ noteId })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to delete note.');
+        }
+
+        // Refresh the notes list
+        populateNoteField();
+
+    } catch (err) {
+        console.error('Error deleting note:', err);
+        alert('Υπήρξε σφάλμα κατά τη διαγραφή της σημείωσης.');
+    }
+}
+
+async function editNote(noteId, noteTextElement) {
+    const newText = prompt('Επεξεργαστείτε τη σημείωση:', noteTextElement.textContent);
+    if (!newText || newText.trim().length === 0) return;
+
+    if (newText.length > 300) {
+        alert('Η σημείωση δεν μπορεί να ξεπερνά τους 300 χαρακτήρες.');
+        return;
+    }
+
+    try {
+        const response = await fetch('/prof/edit-thesis-note', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ noteId, text: newText.trim() })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to edit note.');
+        }
+
+        // Update the text in the DOM
+        noteTextElement.textContent = newText.trim();
+
+    } catch (err) {
+        console.error('Error editing note:', err);
+        alert('Υπήρξε σφάλμα κατά την επεξεργασία της σημείωσης.');
+    }
+}
+
+async function addNewNote() {
+    const noteText = newNoteInput.value.trim();
+    if (!noteText) return;
+
+    if (noteText.length > 300) {
+        alert("Η σημείωση δεν μπορεί να ξεπερνά τους 300 χαρακτήρες.");
+        return;
+    }
+
+    try {
+        const response = await fetch(`/prof/add-thesis-note`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ thesisId, text: noteText })
+        });
+
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        }
+
+        newNoteInput.value = ''; // clear input
+        await populateNoteField(); // refresh notes list
+    } catch (err) {
+        console.error("Error adding note:", err);
+        alert("Υπήρξε σφάλμα κατά την προσθήκη της σημείωσης.");
+    }
+}
+
+// 4. DOM Rendering / UI Setup
+// =======================
+// =======================
+
 function hideLoading() {
     loadingState.classList.add('d-none');
     thesisManagementCard.classList.remove('d-none');
-}
-
-function showNoThesisState() {
-    loadingState.classList.add('d-none');
-    noThesisState.classList.remove('d-none');
-    thesisManagementCard.classList.add('d-none');
-}
-
-function renderThesisDetails(thesis) {
-    thesisTitle.textContent = thesis.title;
-    thesisDescription.textContent = thesis.description;
-    studentName.textContent = thesis.student_name;
-    supervisorName.textContent = thesis.supervisor_name;
-    member1Name.textContent = thesis.member1_name || '—';
-    member2Name.textContent = thesis.member2_name || '—';
-    thesisStatusBadge.textContent = getStatusText(thesis.status);
-}
-
-function setUpModals() {
-    const successModalEl = document.getElementById('successModal');
-    const errorModalEl = document.getElementById('errorModal');
-
-    successModalEl.addEventListener('hidden.bs.modal', () => {
-        location.reload(); // refresh the page when modal is fully hidden
-    });
-
-    errorModalEl.addEventListener('hidden.bs.modal', () => {
-        location.reload(); // refresh the page when modal is fully hidden
-    });
 }
 
 async function renderSections(thesis) {
@@ -203,6 +325,7 @@ async function renderSections(thesis) {
     // Show section depending on status
     switch (thesis.status) {
         case 'under-assignment':
+            setUpCancelAssignmentBtnForUnderAssignment();
             pendingAssignmentSection.classList.remove('d-none');
             populateInvitationTable();
             break;
@@ -231,6 +354,7 @@ async function renderSections(thesis) {
 
             console.log(gradingEnabled.status)
             if (gradingEnabled.status === true) {
+                setUpOpenGradeModalBtn();
                 setUpGradeModal();
                 populateGradesTable();
                 gradingSection.classList.remove('d-none');
@@ -246,7 +370,36 @@ async function renderSections(thesis) {
             gradingSection.classList.remove('d-none');
             break;
     }
-    setUpModals();
+    setUpGeneralModals();
+}
+
+function showNoThesisState() {
+    loadingState.classList.add('d-none');
+    noThesisState.classList.remove('d-none');
+    thesisManagementCard.classList.add('d-none');
+}
+
+function renderThesisDetails(thesis) {
+    thesisTitle.textContent = thesis.title;
+    thesisDescription.textContent = thesis.description;
+    studentName.textContent = thesis.student_name;
+    supervisorName.textContent = thesis.supervisor_name;
+    member1Name.textContent = thesis.member1_name || '—';
+    member2Name.textContent = thesis.member2_name || '—';
+    thesisStatusBadge.textContent = getStatusText(thesis.status);
+}
+
+function setUpGeneralModals() {
+    const successModalEl = document.getElementById('successModal');
+    const errorModalEl = document.getElementById('errorModal');
+
+    successModalEl.addEventListener('hidden.bs.modal', () => {
+        location.reload(); // refresh the page when modal is fully hidden
+    });
+
+    errorModalEl.addEventListener('hidden.bs.modal', () => {
+        location.reload(); // refresh the page when modal is fully hidden
+    });
 }
 
 function setUpGradeModal() {
@@ -304,7 +457,7 @@ function setUpGradeModal() {
     });
 
     saveGradeBtn.addEventListener('click', async () => {
-        const confirmSaveGrade = confirm(
+        const confirmSaveGrade = await showConfirm(
             "Προσοχή! Η βαθμολογία για αυτή τη διπλωματική θα καταχωρηθεί ΟΡΙΣΤΙΚΑ. " +
             "Μετά την αποθήκευση, δεν θα μπορείτε να την αλλάξετε. Είστε σίγουροι ότι θέλετε να συνεχίσετε;"
         );
@@ -333,7 +486,7 @@ async function setUpGradingSection() {
     enableGradingSectionBtn.classList.remove('d-none');
 
     enableGradingSectionBtn.addEventListener('click', async () => {
-        const confirmEnable = confirm(
+        const confirmEnable = await showConfirm(
             "Είστε σίγουροι ότι θέλετε να ενεργοποιήσετε τη βαθμολόγηση; " +
             "Αφού ενεργοποιηθεί, οι καθηγητές θα μπορούν να καταχωρήσουν βαθμούς."
         );
@@ -462,35 +615,6 @@ function setUpUnderReview() {
     underReviewSection.classList.remove('d-none');
 }
 
-// === Event Listeners ===
-function setupEventListeners(thesis) {
-    if (cancelAssignmentBtn) {
-        cancelAssignmentBtn.addEventListener('click', async () => {
-            const confirmCancel = confirm("Είστε σίγουροι ότι θέλετε να ακυρώσετε την ανάθεση;");
-            if (!confirmCancel) return;
-
-            try {
-                await cancelAssignment(thesis.id);
-                document.getElementById('successModal').addEventListener('hidden.bs.modal', () => {
-                    window.location.href = '/prof/view_thesis';
-                }, { once: true });
-            } catch (err) {
-                console.error("Error in cancellation:", err);
-                alert("Υπήρξε σφάλμα κατά την ακύρωση της ανάθεσης.");
-            }
-        });
-    }
-    if (addNoteBtn) {
-        addNoteBtn.addEventListener('click', addNewNote);
-
-        newNoteInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                addNewNote();
-            }
-        });
-    }
-}
-
 async function setUpSupervisorActionsForActiveThesis() {
     try {
         console.log("getting assignment date")
@@ -572,7 +696,7 @@ async function setUpSupervisorActionsForActiveThesis() {
 
     // 4. Mark as under review button
     markAsUnderReviewBtn.addEventListener('click', async () => {
-        if (!confirm("Μεταφορά σε Υπό Εξέταση;")) return;
+        if (!(await showConfirm("Μεταφορά σε Υπό Εξέταση;"))) return;
         try {
             const res = await fetch(`/prof/mark-under-review/${thesisId}`, {
                 method: 'PUT',
@@ -590,32 +714,6 @@ async function setUpSupervisorActionsForActiveThesis() {
     supervisorActionsActive.classList.remove('d-none');
 }
 
-
-// === Cancel Assignment ===
-async function cancelAssignment(id) {
-    const response = await fetch('/prof/cancel-assignment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ thesisId: id })
-    });
-
-    let data;
-    try {
-        data = await response.json();
-    } catch (err) {
-        console.error("Error parsing JSON:", err);
-        throw new Error("Invalid JSON response from server");
-    }
-
-    if (!response.ok) {
-        throw new Error(data.error || `HTTP error! status: ${response.status}`);
-    }
-
-    showSuccess('Η ανάθεση ακυρώθηκε επιτυχώς!');
-}
-
-
-// === Invitations Table ===
 async function populateInvitationTable() {
     const invitations = await fetchInvitations();
     committeeInvitationsTable.innerHTML = '';
@@ -638,7 +736,6 @@ async function populateInvitationTable() {
         committeeInvitationsTable.appendChild(tr);
     });
 }
-
 
 async function populateNoteField() {
     const notes = await fetchNotes();
@@ -692,151 +789,61 @@ async function populateNoteField() {
 
 }
 
-async function deleteNote(noteId) {
-    if (!confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή τη σημείωση;')) return;
 
-    try {
-        const response = await fetch('/prof/delete-thesis-note', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ noteId })
-        });
+// 5. Button Event Listeners
+// =======================
+// =======================
 
-        const data = await response.json();
+function setUpCancelAssignmentBtnForUnderAssignment() {
+    cancelAssignmentBtn.addEventListener('click', async () => {
+        const confirmCancel = await showConfirm("Είστε σίγουροι ότι θέλετε να ακυρώσετε την ανάθεση;");
+        if (!confirmCancel) return;
 
-        if (!response.ok) {
-            throw new Error(data.error || 'Failed to delete note.');
+        try {
+            await cancelAssignment(thesis.id);
+            document.getElementById('successModal').addEventListener('hidden.bs.modal', () => {
+                window.location.href = '/prof/view_thesis';
+            }, { once: true });
+        } catch (err) {
+            console.error("Error in cancellation:", err);
+            alert("Υπήρξε σφάλμα κατά την ακύρωση της ανάθεσης.");
         }
-
-        // Refresh the notes list
-        populateNoteField();
-
-    } catch (err) {
-        console.error('Error deleting note:', err);
-        alert('Υπήρξε σφάλμα κατά τη διαγραφή της σημείωσης.');
-    }
+    });
 }
 
-async function editNote(noteId, noteTextElement) {
-    const newText = prompt('Επεξεργαστείτε τη σημείωση:', noteTextElement.textContent);
-    if (!newText || newText.trim().length === 0) return;
+function setUpOpenGradeModalBtn() {
+    openGradeModalBtn.addEventListener('click', () => {
+        gradeModal.show();
+        document.getElementById('gradeForm').reset();
+        document.getElementById('totalGrade').value = '';
+    });
+}
 
-    if (newText.length > 300) {
-        alert('Η σημείωση δεν μπορεί να ξεπερνά τους 300 χαρακτήρες.');
-        return;
-    }
+function setUpAddNoteBtn() {
+    addNoteBtn.addEventListener('click', addNewNote);
 
-    try {
-        const response = await fetch('/prof/edit-thesis-note', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ noteId, text: newText.trim() })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || 'Failed to edit note.');
+    newNoteInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            addNewNote();
         }
-
-        // Update the text in the DOM
-        noteTextElement.textContent = newText.trim();
-
-    } catch (err) {
-        console.error('Error editing note:', err);
-        alert('Υπήρξε σφάλμα κατά την επεξεργασία της σημείωσης.');
-    }
+    });
 }
 
-async function addNewNote() {
-    const noteText = newNoteInput.value.trim();
-    if (!noteText) return;
+// === Page Initialization ===
+document.addEventListener('DOMContentLoaded', async () => {
+    await initializePage();
+});
 
-    if (noteText.length > 300) {
-        alert("Η σημείωση δεν μπορεί να ξεπερνά τους 300 χαρακτήρες.");
-        return;
-    }
-
+async function initializePage() {
     try {
-        const response = await fetch(`/prof/add-thesis-note`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ thesisId, text: noteText })
-        });
+        const thesis = await fetchThesisData();
+        if (!thesis) return showNoThesisState();
 
-        if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || `HTTP error! status: ${response.status}`);
-        }
-
-        newNoteInput.value = ''; // clear input
-        await populateNoteField(); // refresh notes list
+        hideLoading();
+        renderThesisDetails(thesis);
+        renderSections(thesis);
     } catch (err) {
-        console.error("Error adding note:", err);
-        alert("Υπήρξε σφάλμα κατά την προσθήκη της σημείωσης.");
+        console.error('Error initializing page:', err);
+        showNoThesisState();
     }
-}
-
-async function checkRole(thesisId) {
-    try {
-        const response = await fetch(`/prof/check-professor-role/${thesisId}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || `HTTP error! status: ${response.status}`);
-        }
-
-        return data.role;
-    } catch (err) {
-        console.error("Error finding professor role:", err);
-        alert("Υπήρξε σφάλμα.");
-    }
-}
-
-// === Utility Functions ===
-function getStatusText(status) {
-    const statusMap = {
-        'under-assignment': 'Υπό Ανάθεση',
-        'active': 'Ενεργή',
-        'under-review': 'Υπό Εξέταση',
-        'completed': 'Ολοκληρωμένη',
-        'cancelled': 'Ακυρωμένη'
-    };
-    return statusMap[status] || status;
-}
-
-function getStatusBadge(status) {
-    const badgeMap = {
-        accepted: '<span class="badge bg-success">Αποδεκτή</span>',
-        pending: '<span class="badge bg-warning">Εκκρεμεί</span>',
-        rejected: '<span class="badge bg-danger">Απορριφθείσα</span>'
-    };
-    return badgeMap[status] || `<span class="badge bg-secondary">${status}</span>`;
-}
-
-
-// Calculate average of four criteria
-function calculateTotal(grade) {
-    let totalGrade = 0;
-
-    if (!isNaN(grade.criterion1)) {
-        totalGrade += grade.criterion1 * 0.6;
-    }
-    if (!isNaN(grade.criterion2)) {
-        totalGrade += grade.criterion2 * 0.15;
-    }
-    if (!isNaN(grade.criterion3)) {
-        totalGrade += grade.criterion3 * 0.15;
-    }
-    if (!isNaN(grade.criterion4)) {
-        totalGrade += grade.criterion4 * 0.1;
-    }
-
-    return totalGrade;
 }
