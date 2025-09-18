@@ -2,7 +2,8 @@ var express = require("express");
 var router = express.Router();
 var path = require("path"); // Import the path module for file path operations
 const pool = require("../db/db"); // Import database connection pool
-
+const fs = require('fs');
+const checkPermission = require("../middlewares/checkPermission");
 // Service function to get thesis presentations with date filtering
 async function getThesisPresentations(startDate, endDate) {
   let sql = `
@@ -160,6 +161,44 @@ router.get('/api/presentations', async (req, res) => {
   } catch (err) {
     console.error('Error in /api/presentations:', err);
     res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// Route to serve thesis report PDF
+router.get('/thesis/report/:thesisId', async (req, res) => {
+  const { thesisId } = req.params;
+  const userId = req.session.userId;
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT id 
+       FROM thesis 
+       WHERE id = ? 
+         AND (
+           student_id = ? 
+           OR supervisor_id = ? 
+           OR member1_id = ? 
+           OR member2_id = ?
+         )`,
+      [thesisId, userId, userId, userId, userId]
+    );
+
+    if (rows.length === 0 && !checkPermission('secretary')) {
+      return res.status(403).send('Access denied: You are not authorized to view this PDF.');
+    }
+
+    // 2. Build the path to the PDF fil
+    const pdfPath = path.join(__dirname, `../uploads/reports/${thesisId}_report.pdf`);
+    console.log('Serving PDF:', pdfPath);
+
+    if (!fs.existsSync(pdfPath)) {
+      return res.status(404).send('PDF not found');
+    }
+
+    res.sendFile(pdfPath);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server error');
   }
 });
 

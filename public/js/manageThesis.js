@@ -999,7 +999,6 @@ async function getRepositoryLink() {
 function setupCompletedThesisEventListeners() {
     const viewCompletedReportBtn = document.getElementById('viewCompletedReportBtn');
     const downloadCompletedThesisBtn = document.getElementById('downloadCompletedThesisBtn');
-    const printReportBtn = document.getElementById('printReportBtn');
 
     if (viewCompletedReportBtn) {
         viewCompletedReportBtn.addEventListener('click', viewExaminationReport);
@@ -1009,65 +1008,14 @@ function setupCompletedThesisEventListeners() {
         downloadCompletedThesisBtn.addEventListener('click', downloadFinalThesis);
     }
 
-    if (printReportBtn) {
-        printReportBtn.addEventListener('click', printExaminationReport);
-    }
 }
 
 function viewExaminationReport() {
-    // Show examination report modal
-    const examinationReportModal = new bootstrap.Modal(document.getElementById('examinationReportModal'));
-
-    // Populate examination report content
-    populateExaminationReport();
-
-    examinationReportModal.show();
-}
-
-function populateExaminationReport() {
-    if (!currentThesis) return;
-
-    const reportContent = document.getElementById('reportContent');
-    if (!reportContent) return;
-
-    // Create examination report content
-    const reportHtml = `
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <h6 class="text-primary">Στοιχεία Διπλωματικής</h6>
-                <p><strong>Τίτλος:</strong> ${currentThesis.title}</p>
-                <p><strong>Φοιτητής:</strong> ${currentThesis.student_name || 'Δεν διατίθεται'}</p>
-                <p><strong>Επιβλέπων:</strong> ${currentThesis.supervisor_name} ${currentThesis.supervisor_surname}</p>
-            </div>
-            <div class="col-md-6">
-                <h6 class="text-primary">Στοιχεία Εξέτασης</h6>
-                <p><strong>Ημερομηνία:</strong> ${currentThesis.exam_datetime ? new Date(currentThesis.exam_datetime).toLocaleDateString('el-GR') : 'Δεν διατίθεται'}</p>
-                <p><strong>Τρόπος:</strong> ${currentThesis.exam_mode === 'in-person' ? 'Δια ζώσης' : currentThesis.exam_mode === 'online' ? 'Διαδικτυακά' : 'Δεν διατίθεται'}</p>
-                <p><strong>Τοποθεσία:</strong> ${currentThesis.exam_location || 'Δεν διατίθεται'}</p>
-            </div>
-        </div>
-        <div class="row mb-4">
-            <div class="col-12">
-                <h6 class="text-primary">Αποτέλεσμα Εξέτασης</h6>
-                <div class="alert alert-success">
-                    <i class="bi bi-check-circle me-2"></i>
-                    <strong>Επιτυχής ολοκλήρωση</strong>
-                    ${currentThesis.grade ? `<br>Τελικός βαθμός: <strong>${currentThesis.grade}/10</strong>` : ''}
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-12">
-                <h6 class="text-primary">Σχόλια Επιτροπής</h6>
-                <p class="text-muted">Η διπλωματική εργασία ολοκληρώθηκε επιτυχώς και πληροί όλες τις απαιτήσεις του προγράμματος σπουδών.</p>
-            </div>
-        </div>
-    `;
-
-    reportContent.innerHTML = reportHtml;
+    window.open(`/thesis/report/${currentThesis.id}`, '_blank');
 }
 
 function downloadFinalThesis() {
+    console.log(currentThesis)
     if (!currentThesis || !currentThesis.draft) {
         showError('Δεν υπάρχει διαθέσιμο αρχείο για λήψη.');
         return;
@@ -1075,7 +1023,7 @@ function downloadFinalThesis() {
 
     // Create download link for the final thesis
     const downloadLink = document.createElement('a');
-    downloadLink.href = `/uploads/${currentThesis.draft}`;
+    downloadLink.href = `/uploads/theses/${currentThesis.draft}`;
     downloadLink.download = currentThesis.draft;
     downloadLink.style.display = 'none';
 
@@ -1087,48 +1035,9 @@ function downloadFinalThesis() {
 }
 
 function printExaminationReport() {
-    // Get the modal content
-    const reportContent = document.getElementById('reportContent');
-    if (!reportContent) {
-        showError('Δεν υπάρχει διαθέσιμη αναφορά για εκτύπωση.');
-        return;
-    }
-
-    // Create a new window for printing
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Αναφορά Εξέτασης Διπλωματικής Εργασίας</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-            <style>
-                @media print {
-                    .no-print { display: none !important; }
-                    body { font-size: 12pt; }
-                    .card { border: 1px solid #000 !important; }
-                }
-                body { padding: 20px; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h2 class="text-center mb-4">Αναφορά Εξέτασης Διπλωματικής Εργασίας</h2>
-                ${reportContent.innerHTML}
-            </div>
-        </body>
-        </html>
-    `);
-
-    printWindow.document.close();
-    printWindow.focus();
-
-    // Wait for content to load then print
-    setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-    }, 500);
+    window.location.href = 'o';
 }
+
 
 async function populateCompletedCommitteeMembers() {
     const completedCommitteeMembers = document.getElementById('completedCommitteeMembers');
@@ -1246,6 +1155,29 @@ async function populateStatusHistory() {
                     iconClass = 'bi-file-earmark-text';
                     badgeClass = 'bg-secondary';
                     break;
+
+                // === Newly added cases ===
+                case 'invitation_sent':
+                    actionText = 'Αποστολή πρόσκλησης';
+                    iconClass = 'bi-envelope';
+                    badgeClass = 'bg-primary';
+                    break;
+                case 'exam_scheduled':
+                    actionText = 'Προγραμματισμός εξέτασης';
+                    iconClass = 'bi-calendar-event';
+                    badgeClass = 'bg-info';
+                    break;
+                case 'marked_as_under_review':
+                    actionText = 'Μεταφορά σε υπό εξέταση';
+                    iconClass = 'bi-eye';
+                    badgeClass = 'bg-warning';
+                    break;
+                case 'thesis_completed':
+                    actionText = 'Ολοκλήρωση διπλωματικής';
+                    iconClass = 'bi-award';
+                    badgeClass = 'bg-success';
+                    break;
+
                 default:
                     actionText = event.action;
                     iconClass = 'bi-circle';
@@ -1298,7 +1230,7 @@ function populateCompletedThesisInfo() {
 
     if (completedExamType) {
         completedExamType.textContent = currentThesis.exam_mode === 'in-person' ? 'Δια ζώσης' :
-                                       currentThesis.exam_mode === 'online' ? 'Διαδικτυακά' : 'Δεν διατίθεται';
+            currentThesis.exam_mode === 'online' ? 'Διαδικτυακά' : 'Δεν διατίθεται';
     }
 
     if (completedExamLocation) {

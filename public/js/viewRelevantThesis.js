@@ -21,7 +21,7 @@ const detailStatus = document.getElementById('detailStatus');
 const detailTimeline = document.getElementById('detailTimeline');
 const detailFinalGrade = document.getElementById('detailFinalGrade');
 const detailRepositoryLink = document.getElementById('detailRepositoryLink');
-const detailEvaluationFormLink = document.getElementById('detailEvaluationFormLink');
+const thesisReportLink = document.getElementById('thesisReportLink');
 const actionBtn = document.getElementById('actionBtn');
 const completeThesisInfo = document.getElementById('completeThesisInfo');
 
@@ -188,7 +188,7 @@ async function showThesisDetails(thesis) {
 
 
         detailRepositoryLink.href = thesis.final_repository_link;
-        detailEvaluationFormLink.href = '#';
+        thesisReportLink.href = `/thesis/report/${thesis.id}`;
 
         completeThesisInfo.classList.remove('d-none');
     }
