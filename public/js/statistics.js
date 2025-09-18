@@ -36,7 +36,7 @@ async function loadStatistics() {
 
         showLoadingState();
         
-        const response = await fetch('/prof/statistics', {
+        const response = await fetch('/prof/api/statistics', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'

@@ -98,38 +98,38 @@ function calculateTotal(grade) {
 // =======================
 
 async function fetchThesisData() {
-    const response = await fetch(`/prof/get-specific-thesis/${thesisId}`);
+    const response = await fetch(`/prof/api/get-specific-thesis/${thesisId}`);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
     return data.thesis || null;
 }
 
 async function fetchInvitations() {
-    const response = await fetch(`/prof/get-thesis-invitations/${thesisId}`);
+    const response = await fetch(`/prof/api/get-thesis-invitations/${thesisId}`);
     if (!response.ok) return [];
     return await response.json();
 }
 
 async function fetchNotes() {
-    const response = await fetch(`/prof/get-notes/${thesisId}`);
+    const response = await fetch(`/prof/api/get-notes/${thesisId}`);
     if (!response.ok) return [];
     return await response.json();
 }
 
 async function fetchAssignmentDate() {
-    const response = await fetch(`/prof/get-assignment-date/${thesisId}`);
+    const response = await fetch(`/prof/api/get-assignment-date/${thesisId}`);
     if (!response.ok) return [];
     return await response.json();
 }
 
 async function checkPresentation() {
-    const response = await fetch(`/prof/get-presentation-date/${thesisId}`);
+    const response = await fetch(`/prof/api/get-presentation-date/${thesisId}`);
     if (!response.ok) return [];
     return await response.json();
 }
 
 async function createPresentationAnnouncement(text) {
-    const response = await fetch(`/prof/create-presentation-announcement/${thesisId}`, {
+    const response = await fetch(`/prof/api/create-presentation-announcement/${thesisId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -141,19 +141,19 @@ async function createPresentationAnnouncement(text) {
 }
 
 async function checkAnnouncement() {
-    const response = await fetch(`/prof/get-presentation-announcement/${thesisId}`);
+    const response = await fetch(`/prof/api/get-presentation-announcement/${thesisId}`);
     if (!response.ok) return [];
     return await response.json();
 }
 
 async function checkGrading() {
-    const response = await fetch(`/prof/get-grading-status/${thesisId}`);
+    const response = await fetch(`/prof/api/get-grading-status/${thesisId}`);
     if (!response.ok) return [];
     return await response.json();
 }
 
 async function enableGrading() {
-    const response = await fetch(`/prof/enable-grading/${thesisId}`, {
+    const response = await fetch(`/prof/api/enable-grading/${thesisId}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json'
@@ -164,13 +164,13 @@ async function enableGrading() {
 }
 
 async function getGrades() {
-    const response = await fetch(`/prof/get-grades/${thesisId}`);
+    const response = await fetch(`/prof/api/get-grades/${thesisId}`);
     if (!response.ok) return [];
     return await response.json();
 }
 
 async function saveGrade(data) {
-    const response = await fetch(`/prof/save-grade/${thesisId}`, {
+    const response = await fetch(`/prof/api/save-grade/${thesisId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -182,7 +182,7 @@ async function saveGrade(data) {
 }
 
 async function cancelAssignment(id) {
-    const response = await fetch(`/prof/cancel-under-assignment/${id}`, {
+    const response = await fetch(`/prof/api/cancel-under-assignment/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' }
     });
@@ -204,7 +204,7 @@ async function cancelAssignment(id) {
 
 async function checkRole(thesisId) {
     try {
-        const response = await fetch(`/prof/check-professor-role/${thesisId}`, {
+        const response = await fetch(`/prof/api/check-professor-role/${thesisId}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -228,7 +228,7 @@ async function deleteNote(noteId) {
     if (!(await showConfirm('Είστε σίγουροι ότι θέλετε να διαγράψετε αυτή τη σημείωση;'))) return;
 
     try {
-        const response = await fetch('/prof/delete-thesis-note', {
+        const response = await fetch('/prof/api/delete-thesis-note', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ noteId })
@@ -259,7 +259,7 @@ async function editNote(noteId, noteTextElement) {
     }
 
     try {
-        const response = await fetch('/prof/edit-thesis-note', {
+        const response = await fetch('/prof/api/edit-thesis-note', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ noteId, text: newText.trim() })
@@ -282,6 +282,7 @@ async function editNote(noteId, noteTextElement) {
 
 async function addNewNote() {
     const noteText = newNoteInput.value.trim();
+    console.log(noteText)
     if (!noteText) return;
 
     if (noteText.length > 300) {
@@ -290,7 +291,7 @@ async function addNewNote() {
     }
 
     try {
-        const response = await fetch(`/prof/add-thesis-note`, {
+        const response = await fetch(`/prof/api/add-thesis-note`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ thesisId, text: noteText })
@@ -331,13 +332,13 @@ async function renderSections(thesis) {
             break;
         case 'active':
             activeThesisSection.classList.remove('d-none');
+            setUpAddNoteBtn();
             populateNoteField();
             if (role === 'supervisor')
                 setUpSupervisorActionsForActiveThesis();
             break;
         case 'under-review':
             setUpUnderReview();
-
             const gradingEnabled = await checkGrading();
             const presentation = await checkPresentation();
             const now = new Date();
@@ -345,7 +346,7 @@ async function renderSections(thesis) {
             if (role === 'supervisor') {
                 setUpAnnouncementSection();
                 //REMOVE THE DATE FOR THE PRESENTATION FOR THE WALKTHROUGH
-                if (gradingEnabled.status === false && presentation.datetime < now) setUpGradingSection();
+                if (gradingEnabled.status === false) setUpGradingSection();
             }
             else {
                 const gradingNotEnabledNotice = document.getElementById('gradingNotEnabledNotice');
@@ -493,7 +494,7 @@ async function setUpGradingSection() {
         if (!confirmEnable) return;
 
         try {
-            const response = await fetch(`/prof/enable-grading/${thesisId}`, {
+            const response = await fetch(`/prof/api/enable-grading/${thesisId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -610,7 +611,7 @@ function setUpUnderReview() {
     const viewDraftBtn = document.getElementById('viewDraftBtn');
 
     viewDraftBtn.addEventListener('click', () => {
-        window.location.href = `/prof/download-thesis/${thesisId}`;
+        window.location.href = `/prof/api/download-thesis/${thesisId}`;
     });
     underReviewSection.classList.remove('d-none');
 }
@@ -680,7 +681,7 @@ async function setUpSupervisorActionsForActiveThesis() {
             //console.log(assemblyNumber)
             //console.log(assemblyYear)
 
-            const res = await fetch(`/prof/cancel-active-assignment/${thesisId}`, {
+            const res = await fetch(`/prof/api/cancel-active-assignment/${thesisId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ assemblyNumber, assemblyYear })
@@ -698,7 +699,7 @@ async function setUpSupervisorActionsForActiveThesis() {
     markAsUnderReviewBtn.addEventListener('click', async () => {
         if (!(await showConfirm("Μεταφορά σε Υπό Εξέταση;"))) return;
         try {
-            const res = await fetch(`/prof/mark-under-review/${thesisId}`, {
+            const res = await fetch(`/prof/api/mark-under-review/${thesisId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -802,7 +803,7 @@ function setUpCancelAssignmentBtnForUnderAssignment() {
         try {
             await cancelAssignment(thesis.id);
             document.getElementById('successModal').addEventListener('hidden.bs.modal', () => {
-                window.location.href = '/prof/view_thesis';
+                window.location.href = '/prof/api/view_thesis';
             }, { once: true });
         } catch (err) {
             console.error("Error in cancellation:", err);

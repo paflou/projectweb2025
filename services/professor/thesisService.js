@@ -117,7 +117,7 @@ async function deleteThesis(thesisId, supervisorId) {
 
     const conn = await pool.getConnection();
     try {
-        const [result] = await conn.query(sql, params); // Destructure result
+        const result = await conn.query(sql, params); // Destructure result
         return result;
     } finally {
         conn.release();

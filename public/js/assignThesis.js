@@ -87,7 +87,7 @@ async function handleStudentSearch() {
         searchBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Αναζήτηση...';
         
         // Make API call to search students
-        const response = await fetch(`/prof/search-students?query=${encodeURIComponent(query)}`, {
+        const response = await fetch(`/prof/api/search-students?query=${encodeURIComponent(query)}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -194,7 +194,7 @@ function clearStudentSelection() {
 // Load available topics from the server
 async function loadAvailableTopics() {
     try {
-        const response = await fetch('/prof/available-topics', {
+        const response = await fetch('/prof/api/available-topics', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -356,7 +356,7 @@ async function handleAssignment() {
         assignBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Ανάθεση...';
 
         // Make API call to assign thesis
-        const response = await fetch('/prof/assign-thesis', {
+        const response = await fetch('/prof/api/assign-thesis', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -428,7 +428,7 @@ async function refreshPageContents() {
 // Load temporary assignments from the server
 async function loadTemporaryAssignments() {
     try {
-        const response = await fetch('/prof/temporary-assignments', {
+        const response = await fetch('/prof/api/temporary-assignments', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -557,7 +557,7 @@ async function handleCancelAssignment() {
         confirmCancelBtn.disabled = true;
         confirmCancelBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Ακύρωση...';
 
-        const response = await fetch(`/prof/cancel-under-assignment/${currentAssignmentToCancel.id}`, {
+        const response = await fetch(`/prof/api/cancel-under-assignment/${currentAssignmentToCancel.id}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'

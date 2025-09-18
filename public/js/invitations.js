@@ -44,7 +44,7 @@ async function loadInvitations() {
     try {
         showLoading();
 
-        const response = await fetch('/prof/get-invitations');
+        const response = await fetch('/prof/api/get-invitations');
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -162,7 +162,7 @@ function showLeaveModal(invitationId, thesisId, thesisTitle) {
 // Handle accept invitation
 async function handleAcceptInvitation() {
     try {
-        const response = await fetch('/prof/accept-invitation', {
+        const response = await fetch('/prof/api/accept-invitation', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -196,7 +196,7 @@ async function handleAcceptInvitation() {
 // Handle reject invitation
 async function handleRejectInvitation() {
     try {
-        const response = await fetch('/prof/reject-invitation', {
+        const response = await fetch('/prof/api/reject-invitation', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -230,7 +230,7 @@ async function handleRejectInvitation() {
 // Handle leave committee
 async function handleLeaveComittee() {
     try {
-        const response = await fetch('/prof/leave-comittee', {
+        const response = await fetch('/prof/api/leave-comittee', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

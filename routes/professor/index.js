@@ -9,12 +9,12 @@ const gradingRoutes = require("./gradingRoutes");
 const notesRoutes = require("./notesRoutes");
 const presentationRoutes = require("./presentationRoutes");
 
-router.use(thesisRoutes);
-router.use(invitationRoutes);
-router.use(assignmentRoutes);
-router.use(gradingRoutes);
-router.use(notesRoutes);
-router.use(presentationRoutes);
+router.use('/api', thesisRoutes);
+router.use('/api', invitationRoutes);
+router.use('/api', assignmentRoutes);
+router.use('/api', gradingRoutes);
+router.use('/api', notesRoutes);
+router.use('/api', presentationRoutes);
 
 // Route: /prof/
 
@@ -42,7 +42,7 @@ router.get("/stats", checkPermission("professor"), (req, res) => {
   res.sendFile(path.join(__dirname, "../../public/professor/statistics.html"));
 });
 
-router.get(['/manage', '/manage/:id'], checkPermission('professor'), (req, res) => {
+router.get(['/manage/:id'], checkPermission('professor'), (req, res) => {
   res.sendFile(path.join(__dirname, '../../public/professor/manage.html'));
 });
 

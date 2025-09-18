@@ -49,7 +49,7 @@ function initializeEventListeners() {
 async function loadThesis() {
     showLoading();
     try {
-        const response = await fetch('/prof/get-relevant-thesis', { method: 'GET' });
+        const response = await fetch('/prof/api/get-relevant-thesis', { method: 'GET' });
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
 
@@ -115,7 +115,7 @@ function displayThesis() {
 
 async function getTimelineForThesis(thesisId) {
     try {
-        const response = await fetch(`/prof/get-thesis-timeline/${thesisId}`, { method: 'GET' });
+        const response = await fetch(`/prof/api/get-thesis-timeline/${thesisId}`, { method: 'GET' });
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
         return data.timeline || '-';

@@ -27,7 +27,10 @@ router.get('/get-under-assignment', checkPermission('professor'), async (req, re
       ));
     } else {
       // If no info found, send 401 error
-      res.status(401).json({ error: 'Could not fetch Data' });
+      res.status(401).json({
+        error: 'Could not fetch Data',
+        info: [] // empty list
+      });
     }
   } catch (err) {
     // Log and send server error if something goes wrong

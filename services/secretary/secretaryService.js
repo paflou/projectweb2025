@@ -1,8 +1,6 @@
 const pool = require("../../db/db");
-
-/**
- * Service for secretary thesis management operations
- */
+const generateReport = require('../pdf/generateThesisReport');
+const path = require('path');
 
 /**
  * Get all active and under-review theses for secretary view
@@ -70,14 +68,14 @@ async function getActiveAndUnderReviewTheses() {
   try {
     const rows = await conn.query(sql);
     conn.release();
-    
+
     // Process the results to add additional calculated fields
     return rows.map(thesis => ({
       ...thesis,
       // Convert BigInt values to strings for JSON serialization
       student_number: thesis.student_number ? thesis.student_number.toString() : null,
       days_since_submission: thesis.days_since_submission || 0,
-      
+
       // Format committee members array
       committee_members: [
         thesis.member1_name ? {
@@ -91,12 +89,12 @@ async function getActiveAndUnderReviewTheses() {
           topic: thesis.member2_topic
         } : null
       ].filter(member => member !== null),
-      
+
       // Status display text
       status_text: getStatusText(thesis.thesis_status),
       status_class: getStatusClass(thesis.thesis_status)
     }));
-    
+
   } catch (err) {
     conn.release();
     console.error('Error in getActiveAndUnderReviewTheses:', err);
@@ -192,13 +190,13 @@ async function getThesisDetails(thesisId) {
   try {
     const rows = await conn.query(sql, [thesisId]);
     conn.release();
-    
+
     if (rows.length === 0) {
       return null;
     }
-    
+
     const thesis = rows[0];
-    
+
     // Process and format the result
     return {
       ...thesis,
@@ -214,9 +212,9 @@ async function getThesisDetails(thesisId) {
       member2_mobile: thesis.member2_mobile ? thesis.member2_mobile.toString() : null,
       postcode: thesis.postcode ? thesis.postcode.toString() : null,
       street_number: thesis.street_number ? thesis.street_number.toString() : null,
-      
+
       days_since_submission: thesis.days_since_submission || 0,
-      
+
       // Format committee members
       committee_members: [
         thesis.member1_name ? {
@@ -238,12 +236,12 @@ async function getThesisDetails(thesisId) {
           university: thesis.member2_university
         } : null
       ].filter(member => member !== null),
-      
+
       // Status information
       status_text: getStatusText(thesis.thesis_status),
       status_class: getStatusClass(thesis.thesis_status)
     };
-    
+
   } catch (err) {
     conn.release();
     console.error('Error in getThesisDetails:', err);
@@ -404,19 +402,45 @@ async function markThesisCompleted(thesisId) {
 
   try {
     // Check if thesis exists, is under-review, has grade and repository link
+    // And get the data needed to generate the report
     const checkSql = `
-      SELECT id, thesis_status, title, grade, final_repository_link
-      FROM thesis
-      WHERE id = ? AND thesis_status = 'under-review'
+      SELECT
+          t.id AS thesis_id,
+          t.title AS thesis_title,
+          CONCAT(s.name, ' ', s.surname) AS student_name,
+          CONCAT(sup.name, ' ', sup.surname) AS supervisor_name,
+          CONCAT(m1.name, ' ', m1.surname) AS member1_name,
+          CONCAT(m2.name, ' ', m2.surname) AS member2_name,
+          t.grade AS total_grade,
+          (tg_sup.criterion1 * 0.6 + tg_sup.criterion2 * 0.15 + tg_sup.criterion3 * 0.15 + tg_sup.criterion4 * 0.10) AS supervisor_grade,
+          (tg_m1.criterion1 * 0.6 + tg_m1.criterion2 * 0.15 + tg_m1.criterion3 * 0.15 + tg_m1.criterion4 * 0.10) AS member1_grade,
+          (tg_m2.criterion1 * 0.6 + tg_m2.criterion2 * 0.15 + tg_m2.criterion3 * 0.15 + tg_m2.criterion4 * 0.10) AS member2_grade,
+
+          t.exam_location AS exam_room,
+          DATE_FORMAT(t.exam_datetime, '%d/%m/%y') AS exam_date,
+          DATE_FORMAT(t.exam_datetime, '%H:%i') AS exam_time,
+          DAYNAME(t.exam_datetime) AS exam_day,
+          t.ap_number,
+          t.final_repository_link
+      FROM thesis t
+      INNER JOIN user s ON t.student_id = s.id
+      INNER JOIN user sup ON t.supervisor_id = sup.id
+      INNER JOIN user m1 ON t.member1_id = m1.id
+      INNER JOIN user m2 ON t.member2_id = m2.id
+      INNER JOIN thesis_grades tg_sup ON t.id = tg_sup.thesis_id AND tg_sup.professor_id = t.supervisor_id
+      INNER JOIN thesis_grades tg_m1 ON t.id = tg_m1.thesis_id AND tg_m1.professor_id = t.member1_id
+      INNER JOIN thesis_grades tg_m2 ON t.id = tg_m2.thesis_id AND tg_m2.professor_id = t.member2_id
+      WHERE t.id = ? AND t.thesis_status = 'under-review';
+
     `;
     const [thesis] = await conn.query(checkSql, [thesisId]);
-
+    console.log(thesis)
     if (!thesis) {
       conn.release();
       return { success: false, error: 'Thesis not found or not in under-review status' };
     }
 
-    if (!thesis.grade || thesis.grade <= 0) {
+    if (!thesis.total_grade || thesis.total_grade <= 0) {
       conn.release();
       return { success: false, error: 'Thesis must have a grade recorded before completion' };
     }
@@ -426,13 +450,40 @@ async function markThesisCompleted(thesisId) {
       return { success: false, error: 'Thesis must have repository link (Nemertes) before completion' };
     }
 
+    const outputFile = await generateReport(
+      {
+        outputPath: path.join(__dirname, `../../uploads/reports/${thesisId}_report.pdf`),
+        fields: {
+          student_name: thesis.student_name,
+          supervisor_name: thesis.supervisor_name,
+          member1_name: thesis.member1_name,
+          member2_name: thesis.member2_name,
+          total_grade: thesis.total_grade.toString(),
+          supervisor_grade: thesis.supervisor_grade.toString(),
+          member1_grade: thesis.member1_grade.toString(),
+          member2_grade: thesis.member2_grade.toString(),
+          thesis_title: thesis.thesis_title,
+          exam_room: thesis.exam_room.startsWith('http') ? 'online' : thesis.exam_room,
+          exam_date: thesis.exam_date,
+          exam_time: thesis.exam_time,
+          exam_day: thesis.exam_day,
+          ap_number: thesis.ap_number
+        }
+      }
+    );
+
+    if (!outputFile) {
+      conn.release();
+      return { success: false, error: 'Report generation has failed' };
+    }
+
     // Update thesis status to completed
     const updateSql = `
       UPDATE thesis
-      SET thesis_status = 'completed'
+      SET thesis_status = 'completed', report = ?
       WHERE id = ?
     `;
-    await conn.query(updateSql, [thesisId]);
+    await conn.query(updateSql, [outputFile, thesisId]);
 
     // Log the action
     const logSql = `
@@ -449,6 +500,20 @@ async function markThesisCompleted(thesisId) {
     console.error('Error in markThesisCompleted:', err);
     throw err;
   }
+}
+
+function translateDayToGreek(englishDay) {
+  const daysMap = {
+    Monday: 'Δευτέρα',
+    Tuesday: 'Τρίτη',
+    Wednesday: 'Τετάρτη',
+    Thursday: 'Πέμπτη',
+    Friday: 'Παρασκευή',
+    Saturday: 'Σάββατο',
+    Sunday: 'Κυριακή'
+  };
+
+  return daysMap[englishDay] || englishDay;
 }
 
 module.exports = {

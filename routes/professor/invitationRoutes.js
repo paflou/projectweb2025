@@ -106,7 +106,6 @@ router.post('/leave-comittee', checkPermission('professor'), async (req, res) =>
     }
 
     const result = await leaveComittee(req, thesisId, invitationId);
-
     if (result.success) {
       res.status(200).json({ message: 'Left the comittee successfully' });
     } else {

@@ -26,6 +26,13 @@
             <h4>Υπάρχοντα Θέματα πρός ανάθεση</h4>
             <ul id="table" class="list-group mb-4">
             </ul>
+
+            <div id="noThesisState" class="d-none">
+                <div class="alert alert-info text-center">
+                    <i class="bi bi-info-circle fs-1 mb-3"></i>
+                    <h4>Δεν βρέθηκαν διπλωματικές εργασίες προς ανάθεση</h4>
+                </div>
+            </div>
         </div>
 
         <!-- Modal for creating / updating Thesis -->
@@ -33,7 +40,7 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <form action="#" id="form">
-                        <input id="thesisID"  name="id" class="d-none">
+                        <input id="thesisID" name="id" class="d-none">
                         <div class="modal-header">
                             <h5 class="modal-title" id="createThesisModalLabel">Καταχώρηση Νέου Θέματος</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -75,6 +82,7 @@
         </script>
     <script src="/js/loadPartials.js"></script>
     <script src="/js/populateThesisList.js"></script>
+    <script src="/js/errorOrSuccessModal.js"></script>
 </body>
 
 </html>

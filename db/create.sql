@@ -62,6 +62,9 @@ CREATE TABLE IF NOT EXISTS thesis (
     -- Student-submitted draft
     draft TEXT,
     
+    -- Presentation report (automatically generated when thesis becomes completed)
+    report TEXT,
+
     -- Exam scheduling info
     exam_datetime DATETIME,
     exam_mode ENUM('in-person', 'online'),
