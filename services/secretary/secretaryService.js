@@ -122,6 +122,9 @@ async function getThesisDetails(thesisId) {
       t.pdf,
       t.draft,
       t.final_repository_link,
+      t. ap_number,
+      t.ap_year,
+      t.cancellation_ap_number,
       
       -- Student information
       CONCAT(student.name, ' ', student.surname) AS student_name,

@@ -16,11 +16,11 @@ function getThesisBadge(status) {
     console.log("Getting badge for status:", status);
     switch (status) {
         case 'under-assignment':
-            return '<span class="badge bg-secondary">Υπό Ανάθεση</span>';
+            return '<span class="badge bg-primary">Υπό Ανάθεση</span>';
         case 'active':
             return '<span class="badge bg-success">Ενεργή</span>';
         case 'completed':
-            return '<span class="badge bg-primary">Περατωμένη</span>';
+            return '<span class="badge bg-secondary">Περατωμένη</span>';
         case 'canceled':
             return '<span class="badge bg-danger">Ακυρωμένη</span>';
         default:

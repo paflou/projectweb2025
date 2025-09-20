@@ -1147,7 +1147,6 @@ async function populateStatusHistory() {
                     badgeClass = 'bg-secondary';
                     break;
 
-                // === Newly added cases ===
                 case 'invitation_sent':
                     actionText = 'Αποστολή πρόσκλησης';
                     iconClass = 'bi-envelope';
@@ -1158,9 +1157,14 @@ async function populateStatusHistory() {
                     iconClass = 'bi-calendar-event';
                     badgeClass = 'bg-info';
                     break;
-                case 'marked_as_under_review':
+                case 'marked as under review':
                     actionText = 'Μεταφορά σε υπό εξέταση';
                     iconClass = 'bi-eye';
+                    badgeClass = 'bg-info';
+                    break;
+                case 'ap_number_recorded':
+                    actionText = 'Καταγραφή αριθμού ΑΠ';
+                    iconClass = 'bi-journal-check';
                     badgeClass = 'bg-warning';
                     break;
                 case 'thesis_completed':

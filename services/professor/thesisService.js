@@ -133,6 +133,8 @@ async function getSpecificThesis(thesisId, professorId) {
       t.pdf,
       t.thesis_status AS status,
       t.final_repository_link,
+      t.draft,
+      t.ap_number,
       CONCAT(s.name, ' ', s.surname) AS student_name,
       CONCAT(p.name, ' ', p.surname) AS supervisor_name,
       CONCAT(c1.name, ' ', c1.surname) AS member1_name,

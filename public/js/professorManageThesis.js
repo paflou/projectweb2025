@@ -33,6 +33,7 @@ const notesList = document.getElementById('notesList');
 const newNoteInput = document.getElementById('newNoteInput');
 const supervisorActionsActive = document.getElementById('supervisorActionsActive');
 const cancelAfter2YearsDesc = document.getElementById('cancelAfter2YearsDesc');
+const markAsUnderReviewDesc = document.getElementById('markAsUnderReviewDesc');
 
 const gradingSection = document.getElementById('gradingSection');
 const gradesTable = document.getElementById('gradesTable');
@@ -48,7 +49,6 @@ const gradeModalEl = document.getElementById('gradeModal');
 const gradeModal = new bootstrap.Modal(gradeModalEl);
 
 const thesisId = window.location.pathname.split('/').pop();
-
 
 // 2. Utility Functions
 // =======================
@@ -315,7 +315,7 @@ async function renderSections(thesis) {
             setUpAddNoteBtn();
             populateNoteField();
             if (role === 'supervisor')
-                setUpSupervisorActionsForActiveThesis();
+                setUpSupervisorActionsForActiveThesis(thesis);
             break;
         case 'under-review':
             setUpUnderReview();
@@ -346,7 +346,7 @@ async function renderSections(thesis) {
 
             populateGradesTable();
             openGradeModalBtn.classList.add('d-none');
-            underReviewTitle.textContent = "Ολοκληρωμένη";
+            underReviewTitle.textContent = "Περατωμένη";
             underReviewSection.classList.remove('d-none');
             gradingSection.classList.remove('d-none');
             break;
@@ -555,6 +555,7 @@ async function setUpAnnouncementSection() {
         // Pre-fill textarea
         announcementText.value = announcement.announcement_text;
 
+        
         // Show warning about overwrite    
         announcementWarning.textContent =
             "Προσοχή: " +
@@ -596,7 +597,7 @@ function setUpUnderReview() {
     underReviewSection.classList.remove('d-none');
 }
 
-async function setUpSupervisorActionsForActiveThesis() {
+async function setUpSupervisorActionsForActiveThesis(thesis) {
     try {
         console.log("getting assignment date")
         // Get thesis assignment date
@@ -674,6 +675,24 @@ async function setUpSupervisorActionsForActiveThesis() {
             showError("Παρουσιάστηκε σφάλμα κατά την ακύρωση.");
         }
     });
+
+    markAsUnderReviewBtn.disabled = true; // disable initially
+    
+    console.log(thesis.draft, thesis.ap_number)
+
+    // Enable button only if draft exists and ap number is set
+    if(thesis.draft && thesis.ap_number) {
+        markAsUnderReviewBtn.disabled = false;
+        markAsUnderReviewDesc.classList.add('d-none');
+    }
+    else if(!thesis.draft) {
+        markAsUnderReviewBtn.disabled = true;
+        markAsUnderReviewDesc.textContent = 'Ο φοιτητής πρώτα να ανεβάσει το προσχέδιο.';
+    }
+    else if(!thesis.ap_number) {
+        markAsUnderReviewBtn.disabled = true;
+        markAsUnderReviewDesc.textContent = 'Η γραμματεία πρέπει πρώτα να ορίσει αριθμό μητρώου.';
+    }
 
     // 4. Mark as under review button
     markAsUnderReviewBtn.addEventListener('click', async () => {
