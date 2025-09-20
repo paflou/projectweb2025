@@ -1,12 +1,12 @@
 // View Thesis JavaScript functionality
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // DOM elements
     const loadingState = document.getElementById('loadingState');
     const noThesisState = document.getElementById('noThesisState');
     const thesisDetailsCard = document.getElementById('thesisDetailsCard');
     const committeeCard = document.getElementById('committeeCard');
     const statusInfoCard = document.getElementById('statusInfoCard');
-    
+
     // Thesis details elements
     const thesisTitle = document.getElementById('thesisTitle');
     const thesisDescription = document.getElementById('thesisDescription');
@@ -18,16 +18,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const assignmentInfo = document.getElementById('assignmentInfo');
     const assignmentDate = document.getElementById('assignmentDate');
     const timeElapsed = document.getElementById('timeElapsed');
-    
+
     // File elements
     const attachedFileSection = document.getElementById('attachedFileSection');
     const attachedFileName = document.getElementById('attachedFileName');
     const downloadFileBtn = document.getElementById('downloadFileBtn');
-    
+
     // Committee elements
     const committeeNotAssigned = document.getElementById('committeeNotAssigned');
     const committeeMembers = document.getElementById('committeeMembers');
-    
+
     // Status elements
     const statusDescription = document.getElementById('statusDescription');
 
@@ -49,9 +49,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             const data = await response.json();
-            
+
             hideLoadingState();
-            
+
             if (!data.thesis) {
                 showNoThesisState();
             } else {
@@ -69,22 +69,23 @@ document.addEventListener('DOMContentLoaded', function() {
     function displayThesisDetails(thesis) {
         // Show main card
         thesisDetailsCard.classList.remove('d-none');
-        
+
         // Set basic thesis information
         thesisTitle.textContent = thesis.title;
         thesisDescription.textContent = thesis.description;
-        
+
         // Set status badge
-        getThesisBadge(thesis.thesis_status);
+        thesisStatusBadge.innerHTML = getThesisBadge(thesis.thesis_status);
+        
         // Set supervisor information
         supervisorName.textContent = `${thesis.supervisor_name} ${thesis.supervisor_surname}`;
         supervisorTopic.textContent = thesis.supervisor_topic || 'Δεν έχει καθοριστεί θέμα';
         supervisorDepartment.textContent = thesis.supervisor_department || 'Δεν έχει καθοριστεί τμήμα';
-        
+
         // Set submission date
         const submissionDateObj = new Date(thesis.submission_date);
         submissionDate.textContent = formatDate(submissionDateObj);
-        
+
         // Set assignment information if available
         if (thesis.assignment_date && thesis.time_elapsed_days) {
             assignmentInfo.classList.remove('d-none');
@@ -92,61 +93,34 @@ document.addEventListener('DOMContentLoaded', function() {
             assignmentDate.textContent = formatDate(assignmentDateObj);
             timeElapsed.textContent = `${thesis.time_elapsed_days} ημέρες`;
         }
-        
+
         // Handle attached file
         if (thesis.pdf) {
             attachedFileSection.classList.remove('d-none');
             attachedFileName.textContent = thesis.pdf;
             downloadFileBtn.onclick = () => downloadFile(thesis.pdf);
         }
-        
+
         // Display committee information
         displayCommitteeInfo(thesis);
-        
+
         // Display status information
         displayStatusInfo(thesis);
-    }
-
-    // Set status badge
-    function setStatusBadge(status) {
-        thesisStatusBadge.className = 'badge';
-        
-        switch (status) {
-            case 'under-assignment':
-                thesisStatusBadge.classList.add('bg-warning', 'text-dark');
-                thesisStatusBadge.textContent = 'Υπό Ανάθεση';
-                break;
-            case 'active':
-                thesisStatusBadge.classList.add('bg-success');
-                thesisStatusBadge.textContent = 'Ενεργή';
-                break;
-            case 'under-review':
-                thesisStatusBadge.classList.add('bg-info');
-                thesisStatusBadge.textContent = 'Υπό Εξέταση';
-                break;
-            case 'completed':
-                thesisStatusBadge.classList.add('bg-success');
-                thesisStatusBadge.textContent = 'Ολοκληρωμένη';
-                break;
-            default:
-                thesisStatusBadge.classList.add('bg-secondary');
-                thesisStatusBadge.textContent = 'Άγνωστη';
-        }
     }
 
     // Display committee information
     function displayCommitteeInfo(thesis) {
         committeeCard.classList.remove('d-none');
-        
+
         if (!thesis.committee_members || thesis.committee_members.length === 0) {
             committeeNotAssigned.classList.remove('d-none');
             committeeMembers.innerHTML = '';
         } else {
             committeeNotAssigned.classList.add('d-none');
-            
+
             // Clear existing members
             committeeMembers.innerHTML = '';
-            
+
             // Add supervisor as first member
             const supervisorCard = createCommitteeMemberCard(
                 `${thesis.supervisor_name} ${thesis.supervisor_surname}`,
@@ -156,7 +130,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 'primary'
             );
             committeeMembers.appendChild(supervisorCard);
-            
+
             // Add committee members
             thesis.committee_members.forEach((member, index) => {
                 const memberCard = createCommitteeMemberCard(
@@ -175,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function createCommitteeMemberCard(name, topic, department, role, badgeColor) {
         const col = document.createElement('div');
         col.className = 'col-md-4 mb-3';
-        
+
         col.innerHTML = `
             <div class="card h-100">
                 <div class="card-body">
@@ -192,16 +166,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
         `;
-        
+
         return col;
     }
 
     // Display status-specific information
     function displayStatusInfo(thesis) {
         statusInfoCard.classList.remove('d-none');
-        
+
         let statusHtml = '';
-        
+
         switch (thesis.thesis_status) {
             case 'under-assignment':
                 statusHtml = `
@@ -265,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `;
         }
-        
+
         statusDescription.innerHTML = statusHtml;
     }
 

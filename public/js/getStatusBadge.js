@@ -19,6 +19,8 @@ function getThesisBadge(status) {
             return '<span class="badge bg-primary">Υπό Ανάθεση</span>';
         case 'active':
             return '<span class="badge bg-success">Ενεργή</span>';
+        case 'under-review':
+            return '<span class="badge bg-info">Υπό εξέταση</span>';
         case 'completed':
             return '<span class="badge bg-secondary">Περατωμένη</span>';
         case 'canceled':

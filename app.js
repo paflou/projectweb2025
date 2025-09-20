@@ -56,8 +56,23 @@ app.use(express.json());
 // Parse URL-encoded bodies
 app.use(express.urlencoded({ extended: false }));
 
-// Serve static files from the "public" directory
-app.use(express.static(path.join(__dirname, "public")));
+// Serve static files with cache control
+app.use(express.static(path.join(__dirname, 'public'), {
+  dotfiles: 'deny',
+  index: false,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      // Never cache HTML: always revalidate
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    } else if (filePath.endsWith('.css') || filePath.endsWith('.js')) {
+      // Long cache for CSS/JS: 1 year assuming we manually version
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else if (/\.(jpg|jpeg|png|gif|svg|mp4)$/.test(filePath)) {
+      // Long cache for images/video: 1 year
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  }
+}));
 
 // Mount routers for different routes
 app.use("/", homepageRouter);
