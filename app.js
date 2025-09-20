@@ -57,9 +57,6 @@ app.use(express.json());
 // Parse URL-encoded bodies
 app.use(express.urlencoded({ extended: false }));
 
-// Parse cookies
-app.use(cookieParser());
-
 // Serve static files from the "public" directory
 app.use(express.static(path.join(__dirname, "public")));
 
