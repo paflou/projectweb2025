@@ -11,3 +11,22 @@ function getStatusBadge(status) {
             return '<span class="badge bg-secondary">Άγνωστη</span>';
     }
 }
+
+function getThesisBadge(status) {
+    console.log("Getting badge for status:", status);
+    switch (status) {
+        case 'under-assignment':
+            return '<span class="badge bg-secondary">Υπό Ανάθεση</span>';
+        case 'active':
+            return '<span class="badge bg-success">Ενεργή</span>';
+        case 'completed':
+            return '<span class="badge bg-primary">Περατωμένη</span>';
+        case 'canceled':
+            return '<span class="badge bg-danger">Ακυρωμένη</span>';
+        default:
+            return '<span class="badge bg-dark">Άγνωστη</span>';
+    }
+}
+
+window.getStatusBadge = getStatusBadge;
+window.getThesisBadge = getThesisBadge;

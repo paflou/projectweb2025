@@ -55,7 +55,12 @@ router.post('/upload-thesis', checkPermission('student'), async (req, res) => {
     const result = await handleThesisUpload(req, req.session.userId);
 
     if (result.success) {
+      console.log('Thesis uploaded:', result.filename);
       res.status(200).json({ message: 'Thesis uploaded successfully', filename: result.filename });
+      const response = await saveFileNameToDB(req.session.userId, result.filename).catch(err => {
+        console.error('Error saving filename to DB:', err);
+      });
+      console.log('Filename saved to DB' + response);
     } else {
       res.status(400).json({ error: result.error });
     }

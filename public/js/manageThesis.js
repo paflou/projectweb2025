@@ -217,7 +217,7 @@ async function loadThesisInfo() {
             // Load additional data based on status
             if (data.thesis.thesis_status === 'under-assignment') {
                 loadCommitteeStatus();
-                startStatusPolling(); // Start polling for status changes
+                checkStatus(); // Start polling for status changes
             }
             else if (data.thesis.thesis_status === 'under-review' || data.thesis.thesis_status === 'active') {
                 getCurrentFile();
@@ -911,6 +911,11 @@ function populateExamDetails(dateTime, type, location) {
     displayExamType.textContent = type === 'in-person' ? 'Δια Ζώσης' : 'Διαδικτυακή';
     displayExamLocation.textContent = location;
     scheduledExamCard.classList.remove('d-none');
+
+    console.log('Original dateTime string:', dateTime);
+    console.log('Parsed Date object:', new Date(dateTime));
+    console.log('Localized format:', new Date(dateTime).toLocaleDateString('el-GR'));
+
 }
 
 function escapeHtml(text) {
@@ -920,37 +925,28 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Start polling for thesis status changes
-function startStatusPolling() {
-    if (currentThesis && currentThesis.thesis_status === 'under-assignment') {
-        const pollInterval = setInterval(async () => {
-            try {
-                const response = await fetch('/student/thesis-info');
-                if (!response.ok) return;
+async function checkStatus() {
+    try {
+        const response = await fetch('/student/thesis-info');
+        if (!response.ok) return;
 
-                const data = await response.json();
+        const data = await response.json();
 
-                if (data.thesis && data.thesis.thesis_status !== currentThesis.thesis_status) {
-                    // Status changed!
-                    currentThesis = data.thesis;
-                    displayThesisInfo(data.thesis);
-                    showStatusSection(data.thesis.thesis_status);
+        if (data.thesis && data.thesis.thesis_status !== currentThesis.thesis_status) {
+            currentThesis = data.thesis;
+            displayThesisInfo(data.thesis);
+            showStatusSection(data.thesis.thesis_status);
 
-                    if (data.thesis.thesis_status === 'active') {
-                        showSuccess('Συγχαρητήρια! Η διπλωματική σας μεταβιβάστηκε σε κατάσταση "Ενεργή"! Δύο καθηγητές αποδέχτηκαν την πρόσκληση.');
-                        clearInterval(pollInterval); // Stop polling
-
-                        // Cancel any remaining pending invitations
-                        await cancelRemainingInvitations();
-                    }
-                }
-            } catch (error) {
-                console.error('Error checking status:', error);
+            if (data.thesis.thesis_status === 'active') {
+                showSuccess('Συγχαρητήρια! Η διπλωματική σας μεταβιβάστηκε σε κατάσταση "Ενεργή"! Δύο καθηγητές αποδέχτηκαν την πρόσκληση.');
+                // Cancel any remaining pending invitations
+                await cancelRemainingInvitations();
             }
-        }, 5000); // Check every 5 seconds
+        }
+    } catch (error) {
+        console.error('Error checking status once:', error);
     }
 }
-
 // Cancel remaining pending invitations (called from frontend)
 async function cancelRemainingInvitations() {
     try {
@@ -1033,11 +1029,6 @@ function downloadFinalThesis() {
 
     showSuccess('Η λήψη του τελικού κειμένου ξεκίνησε.');
 }
-
-function printExaminationReport() {
-    window.location.href = 'o';
-}
-
 
 async function populateCompletedCommitteeMembers() {
     const completedCommitteeMembers = document.getElementById('completedCommitteeMembers');
@@ -1257,7 +1248,7 @@ function populateCompletedThesisInfo() {
 window.manageThesis = {
     loadThesisInfo: loadThesisInfo,
     loadCommitteeStatus: loadCommitteeStatus,
-    startStatusPolling: startStatusPolling,
+    checkStatus: checkStatus,
     setupCompletedThesisEventListeners: setupCompletedThesisEventListeners,
     populateCompletedThesisInfo: populateCompletedThesisInfo
 };

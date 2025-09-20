@@ -25,6 +25,7 @@ const thesisReportLink = document.getElementById('thesisReportLink');
 const actionBtn = document.getElementById('actionBtn');
 const completeThesisInfo = document.getElementById('completeThesisInfo');
 
+
 // State variables
 let allThesis = [];
 let filteredThesis = [];
@@ -100,7 +101,7 @@ function displayThesis() {
             <td>${escapeHtml(thesis.student_name)}</td>
             <td>${escapeHtml(thesis.supervisor_name)}</td>
             <td>${thesis.user_role === 'supervisor' ? 'Επιβλέπων' : 'Μέλος Τριμελούς'}</td>
-            <td>${formatStatus(thesis.status)}</td>
+            <td>${getThesisBadge(thesis.status)}</td>
             <td class="text-center">
                 <button class="btn btn-sm btn-primary">Λεπτομέρειες</button>
             </td>

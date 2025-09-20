@@ -54,26 +54,6 @@ const thesisId = window.location.pathname.split('/').pop();
 // =======================
 // =======================
 
-function getStatusText(status) {
-    const statusMap = {
-        'under-assignment': 'Υπό Ανάθεση',
-        'active': 'Ενεργή',
-        'under-review': 'Υπό Εξέταση',
-        'completed': 'Ολοκληρωμένη',
-        'cancelled': 'Ακυρωμένη'
-    };
-    return statusMap[status] || status;
-}
-
-function getStatusBadge(status) {
-    const badgeMap = {
-        accepted: '<span class="badge bg-success">Αποδεκτή</span>',
-        pending: '<span class="badge bg-warning">Εκκρεμεί</span>',
-        rejected: '<span class="badge bg-danger">Απορριφθείσα</span>'
-    };
-    return badgeMap[status] || `<span class="badge bg-secondary">${status}</span>`;
-}
-
 function calculateTotal(grade) {
     let totalGrade = 0;
 
@@ -387,7 +367,7 @@ function renderThesisDetails(thesis) {
     supervisorName.textContent = thesis.supervisor_name;
     member1Name.textContent = thesis.member1_name || '—';
     member2Name.textContent = thesis.member2_name || '—';
-    thesisStatusBadge.textContent = getStatusText(thesis.status);
+    thesisStatusBadge.innerHTML = getThesisBadge(thesis.status);
 }
 
 function setUpGeneralModals() {

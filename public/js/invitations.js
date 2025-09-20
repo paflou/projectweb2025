@@ -1,7 +1,6 @@
 // Global variables to store current invitation data
 let currentInvitationId = null;
 let currentThesisId = null;
-let currentThesisTitle = '';
 
 // DOM elements
 const loadingIndicator = document.getElementById('loadingIndicator');

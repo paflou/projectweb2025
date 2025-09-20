@@ -75,8 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
         thesisDescription.textContent = thesis.description;
         
         // Set status badge
-        setStatusBadge(thesis.thesis_status);
-        
+        getThesisBadge(thesis.thesis_status);
         // Set supervisor information
         supervisorName.textContent = `${thesis.supervisor_name} ${thesis.supervisor_surname}`;
         supervisorTopic.textContent = thesis.supervisor_topic || 'Δεν έχει καθοριστεί θέμα';
@@ -292,7 +291,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function downloadFile(filename) {
         // Create a temporary link to download the file
         const link = document.createElement('a');
-        link.href = `/uploads/${filename}`;
+        link.href = `/uploads/theses_descriptions/${filename}`;
         link.download = filename;
         document.body.appendChild(link);
         link.click();

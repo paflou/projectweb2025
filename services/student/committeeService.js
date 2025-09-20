@@ -1,3 +1,9 @@
+const pool = require("../../db/db");
+
+const {
+  getThesisInfo,
+} = require('./thesisService');
+
 // Function to get committee status
 async function getCommitteeStatus(thesisId) {
   const sql = `
