@@ -40,70 +40,47 @@ router.post("/input", checkPermission("secretary"), async (req, res) => {
 
   const form = new formidable.IncomingForm({
     keepExtensions: true,
-    maxFileSize: 10 * 1024 * 1024, // 10MB limit
-    uploadDir: uploadDir
+    multiples: false,        // single file
+    uploadDir: uploadDir,
+    maxFileSize: 10 * 1024 * 1024 // 10 MB
   });
 
-  try {
-    // Parse the form data using the new formidable v3 API
-    const [fields, files] = await form.parse(req);
+  form.parse(req, async (err, fields, files) => {
+    if (err) {
+      console.error('Form parse error:', err);
+      return res.status(500).json({ success: false, message: err.message });
+    }
 
-    // Get the uploaded file - in formidable v3, files are arrays
+    console.log('Form fields:', fields);
+    console.log('Uploaded files:', files);
+
     let file = files.jsonFile;
-    if (Array.isArray(file)) {
-      file = file[0];
-    }
-
     if (!file) {
-      return res.status(400).json({
-        success: false,
-        message: 'No file uploaded'
-      });
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    // Validate file type
-    const filename = file.originalFilename || file.name || '';
-    if (!filename.toLowerCase().endsWith('.json')) {
-      // Clean up uploaded file
-      fs.unlinkSync(file.filepath);
-      return res.status(400).json({
-        success: false,
-        message: 'Only JSON files are allowed'
-      });
+    const filePath = file.path || file.filepath; // Formidable v2 uses `path`
+    if (!filePath) {
+      return res.status(500).json({ success: false, message: 'Uploaded file path missing' });
     }
-
-    // Read and parse JSON file
-    const fileContent = fs.readFileSync(file.filepath, 'utf8');
-    let jsonData;
 
     try {
-      jsonData = JSON.parse(fileContent);
-    } catch (parseError) {
+      const fileContent = fs.readFileSync(filePath, 'utf8');
+      const jsonData = JSON.parse(fileContent);
+
       // Clean up uploaded file
-      fs.unlinkSync(file.filepath);
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid JSON format: ' + parseError.message
-      });
+      fs.unlinkSync(filePath);
+
+      const importResult = await importJsonData(jsonData);
+
+      res.json(importResult);
+    } catch (readErr) {
+      console.error('File read/parse error:', readErr);
+      res.status(400).json({ success: false, message: 'Invalid JSON file' });
     }
-
-    // Import the data
-    const importResult = await importJsonData(jsonData);
-
-    // Clean up uploaded file
-    fs.unlinkSync(file.filepath);
-
-    // Return the result
-    res.json(importResult);
-
-  } catch (error) {
-    console.error('Import error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during import: ' + error.message
-    });
-  }
+  });
 });
+
 
 router.get("/manage", checkPermission("secretary"), (req, res) => {
   res.sendFile(path.join(__dirname, "../../public/secretary/manage.html"));
