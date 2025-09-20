@@ -532,6 +532,7 @@ async function setUpAnnouncementSection() {
     const generateAnnouncementBtn = document.getElementById('generateAnnouncementBtn');
     const announcementText = document.getElementById('announcementText');
     const announcementWarning = document.getElementById('announcementWarning');
+    const announcementSpan = document.getElementById('announcementSpan');
     announcementText.value = '';
     announcementSection.classList.remove('d-none');
 
@@ -568,6 +569,7 @@ async function setUpAnnouncementSection() {
         generateAnnouncementBtn.classList.remove("btn-outline-success");
 
         announcementWarning.classList.remove('d-none'); // show it
+        announcementSpan.classList.remove('d-none'); // show it
     } else {
         announcementWarning.classList.add('d-none'); // hide it if no announcement exists
     }
