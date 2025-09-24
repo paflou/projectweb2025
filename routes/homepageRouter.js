@@ -23,6 +23,7 @@ SELECT
     u_member2.surname AS member2_surname,
     
     t.title AS thesis_title,
+    t.description AS thesis_description,
     t.exam_datetime,
     t.exam_mode,
     t.exam_location,
@@ -128,9 +129,9 @@ router.get('/api/presentations', async (req, res) => {
 
       presentations.forEach(presentation => {
         xml += '  <presentation>\n';
-        xml += `    <id>${presentation.id}</id>\n`;
-        xml += `    <title><![CDATA[${presentation.title}]]></title>\n`;
-        xml += `    <description><![CDATA[${presentation.description || ''}]]></description>\n`;
+        xml += `    <id>${presentation.announcement_id}</id>\n`;
+        xml += `    <title><![CDATA[${presentation.thesis_title}]]></title>\n`;
+        xml += `    <description><![CDATA[${presentation.thesis_description || ''}]]></description>\n`;
         xml += `    <exam_datetime>${presentation.exam_datetime}</exam_datetime>\n`;
         xml += `    <exam_mode>${presentation.exam_mode || ''}</exam_mode>\n`;
         xml += `    <exam_location><![CDATA[${presentation.exam_location || ''}]]></exam_location>\n`;
